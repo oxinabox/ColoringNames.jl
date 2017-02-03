@@ -17,3 +17,5 @@ using MLDataUtils
     @test tokenizer("red-green") == ["red", "-","green"]
 end
 
+include("util.jl")
+

@@ -4,8 +4,7 @@ using MLDataUtils
 using SwiftObjectStores
 using Iterators
 
-export morpheme_tokenizer
-
+export morpheme_tokenizer, rpad_to_matrix, @names_from
 
 """Higher Order Function,
 return a closure, that can use the rules to tokenize an input.
@@ -29,6 +28,9 @@ function morpheme_tokenizer(rule_csv_file::AbstractString)
     end
     morpheme_tokenizer(rules)
 end;
+
+
+include("util.jl")
 
 
 end # module
