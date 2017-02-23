@@ -85,6 +85,7 @@ function color_to_terms_network(n_classes, n_steps;
         @show get_shape(find(mask))
         costs = nn.sparse_softmax_cross_entropy_with_logits(LL_masked, TT_masked+1)
         cost = reduce_mean(-costs) #cross entropy
+        @show cost
         optimizer = train.minimize(train.AdamOptimizer(learning_rate), cost)
 
 
