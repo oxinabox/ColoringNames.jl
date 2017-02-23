@@ -18,6 +18,18 @@ function rpad_to_matrix{T}(xss::Vector{Vector{T}}, n_rows::T=maximum(length.(xss
     ret
 end
 
+"stips (trims) a value from a vector to make it shorter"
+function Base.rstrip{T}(v::Vector{T}, t::T=zero(T))
+    last_strip = length(v)
+    while last_strip>1
+        v[last_strip]!=t && break
+        last_strip-=1
+    end
+    @view v[1:last_strip]
+end
+
+
+
 function names_candidates(blk::Expr) :: Vector{Symbol}
     names_in_block = Vector{Symbol}()
     for a in blk.args

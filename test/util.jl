@@ -10,8 +10,14 @@
     ]
 end;
 
+@testset "stripping" begin
+    @test rstrip([1,2,3])==[1,2,3]
+    @test rstrip([0,1,0,2,3])==[0,1,0,2,3]
+    @test rstrip([1,2,3, 0])==[1,2,3]
+    @test rstrip([1,2,3,0,0])==[1,2,3]
+end;
 
-@testset "names_from" begin
+testset "names_from" begin
     y_outer = [2,3,4]
     localnames = @names_from begin
         x = 2
