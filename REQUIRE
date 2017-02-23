@@ -3,3 +3,11 @@ NamedColors
 TensorFlow
 ParserCombinator
 AbstractTrees
+MLDataUtils #dev
+MLLabelUtils
+ProgressMeter
+Memoize
+StatsBase
+Iterators
+SwiftObjectStores
+StaticArrays

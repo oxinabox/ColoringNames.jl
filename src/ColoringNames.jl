@@ -1,36 +1,14 @@
 module ColoringNames
 
 using MLDataUtils
-using SwiftObjectStores
 using Iterators
+using Memoize
 
-export morpheme_tokenizer, rpad_to_matrix, @names_from
-
-"""Higher Order Function,
-return a closure, that can use the rules to tokenize an input.
-"""
-function morpheme_tokenizer(replacement_rules)
-    _cache = Dict() #GOLDPLATE: Type specificity
-    function tokenize(input)
-        get!(_cache, input) do
-            for (pat, sub) in replacement_rules
-                input = replace(input, pat, sub)
-            end
-            split(input)
-        end
-    end
-    tokenize
-end
-
-function morpheme_tokenizer(rule_csv_file::AbstractString)
-    rules = open(rule_csv_file) do fh
-        ObsView(readcsv(fh) , ObsDim.First())
-    end
-    morpheme_tokenizer(rules)
-end;
-
+export morpheme_tokenizer, morpheme_tokenize, demarcate, rpad_to_matrix, @names_from
 
 include("util.jl")
+
+include("input.jl")
 
 
 end # module
