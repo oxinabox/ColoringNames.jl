@@ -8,7 +8,7 @@ end
 
 "Creates a matrix where each column is one of the vectors from `xss`"
 function rpad_to_matrix{T}(xss::Vector{Vector{T}}, n_rows::T=maximum(length.(xss)), p::T=zero(T))
-    n_cols = length(xss) 
+    n_cols = length(xss)
     ret = fill(p, (n_rows, n_cols))
     for (cc, xs) in enumerate(xss)
         for (rr, x) in enumerate(xs)
@@ -65,4 +65,3 @@ macro names_from(blk::Expr)
         end
     end
 end
-

@@ -7,7 +7,7 @@ using Iterators
 using ColoringNames
 using MLLabelUtils
 using StaticArrays
-using ProgressMeter
+using Juno
 using StatsBase
 
 
@@ -32,12 +32,11 @@ end
 
 get_mask(V, dtype=Float32)=cast(V, Bool)
 apply_mask(V, mask) = gather_nd(V, find(mask))
-#V.*tile(expand_dims(mask, 1), [1, get_shape(V,2)])
+
 
 #DEFINITION
 function color_to_terms_network(n_classes, n_steps;
         batch_size = 128,
-        learning_rate = 0.05,
         hidden_layer_size = 256,
         embedding_dim = 16
     )
@@ -52,20 +51,17 @@ function color_to_terms_network(n_classes, n_steps;
 
         EmbeddingTable = get_variable("TokenEmbeddings3",  [n_classes, embedding_dim], Float32; initializer=Normal(0, .1))
 
-
         #Mangle Terms into shape
-        Term_obs_s_out = slice(Term_obs_s, [1,0], [-1,-1]) #Don't want first input "<S>" #0based
-        TT = reshape(Term_obs_s_out, [n_steps*batch_size]; name="Stack_Term_obs_s")
+        Term_obs = unpack(Term_obs_s)
+        TT = pack(Term_obs[2:end]) #Skip first input which will be <S>
 
-        Term_obs_s_ins = unpack(Term_obs_s+1)[1:end-1]#Don't want last input "</S>" (or padding character often but we will handle that seperately)
-        Tes = gather.(Scalar(EmbeddingTable), Term_obs_s_ins)
-
-        @show get_shape.(Tes)
+        Term_obs_s_ins = Term_obs[1:end-1]#Don't want last input "</S>" (or padding character often but we will handle that seperately)
+        Tes = [gather(EmbeddingTable, term+1) for term in Term_obs_s_ins] #+1 because Gather is 1 indexed
 
 
         #Mangle colors into shape
         X_h, X_s, X_v = unpack(X_hsv; axis=2)
-        X_h = reshape(X_h, [batch_size])
+        #X_h = reshape(X_h, [batch_size])
         X_hr = X_h.*2π
         X_col = pack((sin(X_hr), cos(X_hr), X_s-0.5, X_v-0.5); axis=2) #Smooth hue by breaking into cos and sin, and zero mean everything else1
         Xs = [concat(2, [X_col, T]; name="Xs$ii") for (ii,T) in enumerate(Tes)]#Pair color input at each step with previous term
@@ -73,24 +69,26 @@ function color_to_terms_network(n_classes, n_steps;
 
         Hs, states = nn.rnn(nn.rnn_cell.LSTMCell(hidden_layer_size), Xs; dtype=Float32)#, sequence_length=n_steps);
         W1 = get_variable("weights2", [hidden_layer_size, n_classes], Float32;  initializer=Normal(0, .1))
-        B1 = get_variable("bias2", [n_classes], Float32;  initializer=Normal(0, .1))
+        B1 = get_variable("bias2", [n_classes], Float32;  initializer=Normal(0, .01))
         Ls =  [H*W1+B1 for H in Hs]
-
-
-        LL = concat(1, Ls; name="Stack_Logits")
+        @show get_shape.(Ls)
+        LL = pack(Ls; name="Stack_Logits")
 
         mask = get_mask(TT)
         TT_masked = apply_mask(TT, mask)
         LL_masked = apply_mask(LL, mask)
-        @show get_shape(find(mask))
-        costs = nn.sparse_softmax_cross_entropy_with_logits(LL_masked, TT_masked+1)
-        cost = reduce_mean(-costs) #cross entropy
-        @show cost
-        optimizer = train.minimize(train.AdamOptimizer(learning_rate), cost)
+        @show get_shape(LL_masked)
+        @show get_shape(TT_masked)
 
+        costs = nn.sparse_softmax_cross_entropy_with_logits(LL_masked, TT_masked+1) #Add one as TT is 0 based
+        cost = -reduce_mean(costs) #cross entropy
+        @show get_shape(cost)
 
-        Term_preds_onehots = nn.softmax(LL; name="Term_preds_onehots")
-        Term_preds_s = reshape(indmax(Term_preds_onehots, 2)+1, [n_steps, batch_size]) #TODO: this messes up zero entries, not that it matters
+        optimiser = train.minimize(train.AdamOptimizer(), cost)
+        #TODO implement Scatter_ND, and use it to bring everything back where it belongs using the mask
+
+        #Term_preds_onehots = nn.softmax(LL; name="Term_preds_onehots")
+        #Term_preds_s = reshape(indmax(Term_preds_onehots, 2)+1, [n_steps, batch_size]) #TODO: this messes up zero entries, not that it matters
 
         #costs  = reduce_sum(Term_obs_onehots.*Term_preds_onehots_log, reduction_indices=[1])
 
@@ -106,13 +104,13 @@ end
 
 
 function train_from_terms!(sess, t::Associative{Symbol}, train_terms_padded, train_hsv; epochs=3)
-    batchs = eachbatch(shuffleobs((train_hsv, train_terms_padded); obsdim=od); size=batch_size, obsdim=od)
     local cost_o
-    for ii in 1:epochs
+    @progress "Epochs" for ii in 1:epochs
         @show ii
-        @showprogress for (hsv,terms) in batchs
-            Term_preds_s_o, TT_s_o, cost_o, optimizer_o = run(sess,
-                [t[:Term_preds_s], t[:TT], t[:cost], t[:optimizer]],
+        batchs = eachbatch(shuffleobs((train_hsv, train_terms_padded); obsdim=od); size=batch_size, obsdim=od)
+        @progress "Batches" for (hsv,terms) in batchs
+            cost_o, optimizer_o = run(sess,
+                [t[:cost], t[:optimiser]],
             Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))
         end
     end
@@ -153,15 +151,15 @@ function rough_evalute(sess, t::Associative{Symbol}, test_terms_padded, test_hsv
     cost_total = 0.0
     acc_total = 0.0
     perps = Float64[]
-    preds_o = Matrix{Float64}(size(test_terms_padded,1)-1,0)
-    @showprogress for (hsv,terms) in batchs
-        preds, preds_lp, cost_o = run(sess,
-        [t[:Term_preds_s], t[:Term_preds_onehots_log], t[:cost]],
+    preds_o = Matrix{Float64}( size(test_terms_padded,1)-1, 0)
+    @progress for (hsv,terms) in batchs
+        preds, preds_onehot, cost_o = run(sess,
+        [t[:Term_preds_s], t[:Term_preds_onehots], t[:cost]],
         Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))
 
         preds_o = [preds_o preds]
 
-        push!(perps, masked_perp(terms, preds_lp))
+        push!(perps, masked_perp(terms, log.(preds_onehot)))
         acc_total += masked_acc(terms, preds)
         cost_total += cost_o
     end
@@ -171,3 +169,5 @@ function rough_evalute(sess, t::Associative{Symbol}, test_terms_padded, test_hsv
     geomean(perps),
     preds_o)
 end
+
+|
