@@ -32,6 +32,7 @@ end
 
 get_mask(V, dtype=Float32)=cast(V, Bool)
 apply_mask(V, mask) = gather_nd(V, find(mask))
+unwrap_mask(masked_vals, mask, original_vals) =  scatter_nd(find(mask), masked_vals, get_shape(original_vals))
 
 
 #DEFINITION
@@ -49,7 +50,9 @@ function color_to_terms_network(n_classes, n_steps;
         X_hsv = placeholder(Float32, shape=[batch_size, n_input]; name="X_HSVs")
         Term_obs_s = placeholder(Int32, shape=[n_steps+1, batch_size]; name="Term_obs_s")
 
-        EmbeddingTable = get_variable("TokenEmbeddings3",  [n_classes, embedding_dim], Float32; initializer=Normal(0, .1))
+        EmbeddingTable = get_variable("TokenEmbeddings3",  [n_classes, embedding_dim], Float32;
+            initializer=Normal(0, .001))
+
 
         #Mangle Terms into shape
         Term_obs = unpack(Term_obs_s)
@@ -66,22 +69,29 @@ function color_to_terms_network(n_classes, n_steps;
         X_col = pack((sin(X_hr), cos(X_hr), X_s-0.5, X_v-0.5); axis=2) #Smooth hue by breaking into cos and sin, and zero mean everything else1
         Xs = [concat(2, [X_col, T]; name="Xs$ii") for (ii,T) in enumerate(Tes)]#Pair color input at each step with previous term
 
-
-        Hs, states = nn.rnn(nn.rnn_cell.LSTMCell(hidden_layer_size), Xs; dtype=Float32)#, sequence_length=n_steps);
+        @show get_shape.(Xs)
+        cell = nn.rnn_cell.LSTMCell(hidden_layer_size)
+        Hs, states = nn.rnn(cell, Xs; dtype=Float32)#, sequence_length=n_steps);
         W1 = get_variable("weights2", [hidden_layer_size, n_classes], Float32;  initializer=Normal(0, .1))
         B1 = get_variable("bias2", [n_classes], Float32;  initializer=Normal(0, .01))
+        Hs2 = Hs
         Ls =  [H*W1+B1 for H in Hs]
         @show get_shape.(Ls)
         LL = pack(Ls; name="Stack_Logits")
 
-        mask = get_mask(TT)
-        TT_masked = apply_mask(TT, mask)
-        LL_masked = apply_mask(LL, mask)
-        @show get_shape(LL_masked)
-        @show get_shape(TT_masked)
+        mask = (TT.!=Int32(0)) & (TT.!=Int32(4))
+        TT_flat_masked = apply_mask(TT, mask)
+        LL_flat_masked = apply_mask(LL, mask)
 
-        costs = nn.sparse_softmax_cross_entropy_with_logits(LL_masked, TT_masked+1) #Add one as TT is 0 based
-        cost = -reduce_mean(costs) #cross entropy
+        TT_masked = unwrap_mask(TT_flat_masked, mask, TT)
+        LL_masked = unwrap_mask(LL_flat_masked, mask, LL)
+
+        #Term_obs_onehots = one_hot(TT_masked, n_classes)
+        #Term_preds_onehots_log = nn.log_softmax(LL_masked; name="Term_preds_onehots_log")
+        #costs  = reduce_sum(Term_obs_onehots.*Term_preds_onehots_log; reduction_indices=[1])
+
+        costs = nn.sparse_softmax_cross_entropy_with_logits(LL_flat_masked, TT_flat_masked+1) #Add one as TT is 0 based
+        cost = reduce_mean(costs) #cross entropy
         @show get_shape(cost)
 
         optimiser = train.minimize(train.AdamOptimizer(), cost)

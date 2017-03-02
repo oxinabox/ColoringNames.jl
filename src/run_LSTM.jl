@@ -20,7 +20,7 @@ sess, t = color_to_terms_network(n_classes, n_steps;
 
 ############################
 #obs,pred, oo, pp = run(sess, [Term_obs_onehots, Term_preds_onehots, Term_obs_s_out, Term_preds_s], Dict(X_hsv=>hsv_data, Term_obs_s=>padded_labels))
-train_from_terms!(sess, t, train_terms_padded, train_hsv; epochs=3)
+train_from_terms!(sess, t, train_terms_padded, train_hsv; epochs=1)
 
 (hsv,terms) = eachbatch(
     shuffleobs((train_hsv, train_terms_padded), obsdim=od);
@@ -28,13 +28,24 @@ train_from_terms!(sess, t, train_terms_padded, train_hsv; epochs=3)
     obsdim=od) |> first
 
 ret = run(sess,
-[t[:TT_masked], t[:LL_masked], t[:LL_logits]],
-Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))
+    [t[:TT_flat_masked], t[:LL_flat_masked], t[:mask], t[:LL], t[:TT]],
+    Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))
 
+ret = run(sess,
+    [t[:TT_masked], t[:LL_masked], t[:mask], t[:LL], t[:TT]],
+    Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))
+
+
+mapslices(indmax, ret[2], 2)
 squeeze(mapslices(indmax, ret[2], 3),3)
 
 
+run(sess, [t[:LL_masked], t[:TT_masked], t[:mask]], Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))
 
+
+
+
+run(sess, [t[:LL_masked], t[:TT_masked], t[:mask]], Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))
 
 
 cost, acc, perp, preds_o = rough_evalute(sess, t, valid_terms_padded, valid_hsv)
