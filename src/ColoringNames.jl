@@ -10,5 +10,7 @@ include("util.jl")
 
 include("input.jl")
 
+include("feature_sampling.jl")
+
 
 end # module
