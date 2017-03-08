@@ -11,35 +11,19 @@ using Juno
 using StatsBase
 
 
-const od =(MLDataUtils.ObsDim.First(), MLDataUtils.ObsDim.Last())
-
-function prepare_data(raw, encoding_=nothing, tokenize=morpheme_tokenize)
-    labels = convert(Vector{String}, raw[:,1]);
-    hsv_data = convert(Matrix{Float64}, raw[:,2:end]);
-    tokenized_labels = demarcate.(tokenize.(labels))
-    local encoding
-    if encoding_===nothing
-        all_tokens = reduce(union, tokenized_labels)
-        encoding = labelenc(all_tokens)
-    else
-        encoding = encoding_
-    end
-
-    label_inds = map(toks->label2ind.(toks, Scalar(encoding)), tokenized_labels)
-    rpad_to_matrix(label_inds), hsv_data, encoding
-end
 
 
-get_mask(V, dtype=Float32)=cast(V, Bool)
+
+get_mask(V)=cast(V, Bool)
 apply_mask(V, mask) = gather_nd(V, find(mask))
 unwrap_mask(masked_vals, mask, original_vals) =  scatter_nd(find(mask), masked_vals, get_shape(original_vals))
-
 
 #DEFINITION
 function color_to_terms_network(n_classes, n_steps;
         batch_size = 128,
         hidden_layer_size = 256,
-        embedding_dim = 16
+        embedding_dim = 16,
+        learning_rate = 0.001
     )
     n_input = 3 # HSV
 
@@ -68,6 +52,8 @@ function color_to_terms_network(n_classes, n_steps;
         X_hr = X_h.*2π
         X_col = pack((sin(X_hr), cos(X_hr), X_s-0.5, X_v-0.5); axis=2) #Smooth hue by breaking into cos and sin, and zero mean everything else1
         Xs = [concat(2, [X_col, T]; name="Xs$ii") for (ii,T) in enumerate(Tes)]#Pair color input at each step with previous term
+        #Xs = [X_col for (ii,T) in enumerate(Tes)]#TODO REMOVE ME
+
 
         @show get_shape.(Xs)
         cell = nn.rnn_cell.LSTMCell(hidden_layer_size)
@@ -79,7 +65,7 @@ function color_to_terms_network(n_classes, n_steps;
         @show get_shape.(Ls)
         LL = pack(Ls; name="Stack_Logits")
 
-        mask = (TT.!=Int32(0)) & (TT.!=Int32(4))
+        mask = TT.!=Int32(-1) #All True
         TT_flat_masked = apply_mask(TT, mask)
         LL_flat_masked = apply_mask(LL, mask)
 
@@ -94,7 +80,7 @@ function color_to_terms_network(n_classes, n_steps;
         cost = reduce_mean(costs) #cross entropy
         @show get_shape(cost)
 
-        optimiser = train.minimize(train.AdamOptimizer(), cost)
+        optimiser = train.minimize(train.AdamOptimizer(learning_rate), costs)
         #TODO implement Scatter_ND, and use it to bring everything back where it belongs using the mask
 
         #Term_preds_onehots = nn.softmax(LL; name="Term_preds_onehots")

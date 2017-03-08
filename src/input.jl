@@ -26,3 +26,26 @@ const rules_path = joinpath(dirname(@__FILE__), "..", "data", "replacement_rules
 const morpheme_tokenize = morpheme_tokenizer(rules_path)
 
 @memoize demarcate(tokens, starter="<S>", ender="</S>") = [starter; tokens; ender]
+
+
+const od =(MLDataUtils.ObsDim.First(), MLDataUtils.ObsDim.Last())
+
+"""
+Encodes and packs data
+Returns the packed data and the encoder.
+"""
+function prepare_data(raw, encoding_=nothing, tokenize=morpheme_tokenize)
+    labels = convert(Vector{String}, raw[:,1]);
+    hsv_data = convert(Matrix{Float64}, raw[:,2:end]);
+    tokenized_labels = demarcate.(tokenize.(labels))
+    local encoding
+    if encoding_===nothing
+        all_tokens = reduce(union, tokenized_labels)
+        encoding = labelenc(all_tokens)
+    else
+        encoding = encoding_
+    end
+
+    label_inds = map(toks->label2ind.(toks, Scalar(encoding)), tokenized_labels)
+    rpad_to_matrix(label_inds), hsv_data, encoding
+end

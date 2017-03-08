@@ -14,36 +14,33 @@ n_classes = nlabel(encoding)+1
 sess, t = color_to_terms_network(n_classes, n_steps;
         hidden_layer_size = 32,
         embedding_dim = 16,
-        batch_size=batch_size
+        batch_size=batch_size,
+        learning_rate=0.05
     )
 
 
 ############################
 #obs,pred, oo, pp = run(sess, [Term_obs_onehots, Term_preds_onehots, Term_obs_s_out, Term_preds_s], Dict(X_hsv=>hsv_data, Term_obs_s=>padded_labels))
-train_from_terms!(sess, t, train_terms_padded, train_hsv; epochs=1)
+train_from_terms!(sess, t, train_terms_padded, train_hsv; epochs=50)
 
 (hsv,terms) = eachbatch(
     shuffleobs((train_hsv, train_terms_padded), obsdim=od);
     size=batch_size,
     obsdim=od) |> first
 
-ret = run(sess,
-    [t[:TT_flat_masked], t[:LL_flat_masked], t[:mask], t[:LL], t[:TT]],
-    Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))
-
-ret = run(sess,
-    [t[:TT_masked], t[:LL_masked], t[:mask], t[:LL], t[:TT]],
+LL,TT = run(sess,
+    [t[:LL], t[:TT]],
     Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))
 
 
-mapslices(indmax, ret[2], 2)
-squeeze(mapslices(indmax, ret[2], 3),3)
+
+squeeze(mapslices(indmax, LL, 3),3)-1
 
 
 run(sess, [t[:LL_masked], t[:TT_masked], t[:mask]], Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))
 
-
-
+saver = train.Saver()
+train.save(saver, sess, "./320")
 
 run(sess, [t[:LL_masked], t[:TT_masked], t[:mask]], Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))
 

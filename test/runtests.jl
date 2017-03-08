@@ -2,8 +2,17 @@ using ColoringNames
 using Base.Test
 using MLDataUtils
 
-@testset "Input" being
-  include("input.jl")
+tests = [
+    "input.jl",
+    "util.jl",
+    "sampler.jl"
+]
+
+for filename in tests
+    name = first(splitext(filename))
+    @testset "$name" begin
+        include(filename)
+    end
 end
 
 include("util.jl")
