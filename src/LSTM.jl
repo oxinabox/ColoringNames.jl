@@ -10,10 +10,6 @@ using StaticArrays
 using Juno
 using StatsBase
 
-
-
-
-
 get_mask(V)=cast(V, Bool)
 apply_mask(V, mask) = gather_nd(V, find(mask))
 unwrap_mask(masked_vals, mask, original_vals) =  scatter_nd(find(mask), masked_vals, get_shape(original_vals))
