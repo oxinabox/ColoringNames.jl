@@ -15,7 +15,7 @@ sess, t = color_to_terms_network(n_classes, n_steps;
         hidden_layer_size = 32,
         embedding_dim = 16,
         batch_size=batch_size,
-        learning_rate=0.05
+        learning_rate=0.5
     )
 
 

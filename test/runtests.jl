@@ -5,7 +5,6 @@ using MLDataUtils
 tests = [
     "input.jl",
     "util.jl",
-    "sampler.jl"
 ]
 
 for filename in tests
@@ -14,5 +13,3 @@ for filename in tests
         include(filename)
     end
 end
-
-include("util.jl")

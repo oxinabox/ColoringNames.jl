@@ -99,7 +99,8 @@ function train_from_terms!(sess, t::Associative{Symbol}, train_terms_padded, tra
     local cost_o
     @progress "Epochs" for ii in 1:epochs
         @show ii
-        batchs = eachbatch(shuffleobs((train_hsv, train_terms_padded); obsdim=od); size=batch_size, obsdim=od)
+        data = oversample((train_hsv, train_terms_padded); obsdim=od, shuffleobs=true)
+        batchs = eachbatch(data; size=batch_size, obsdim=od)
         @progress "Batches" for (hsv,terms) in batchs
             cost_o, optimizer_o = run(sess,
                 [t[:cost], t[:optimiser]],

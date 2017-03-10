@@ -10,7 +10,6 @@ include("util.jl")
 
 include("input.jl")
 
-include("sampler.jl")
 
 
 end # module
