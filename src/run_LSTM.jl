@@ -1,4 +1,14 @@
-include("LSTM.jl")
+using SwiftObjectStores
+using ColoringNames
+using TensorFlow
+using Distributions
+using MLDataUtils
+using Iterators
+using MLLabelUtils
+using StaticArrays
+using Juno
+using StatsBase
+
 
 const serv=SwiftService()
 const train_raw = get_file(fh->readdlm(fh,'\t'), serv, "color", "monroe/train.csv")
@@ -7,21 +17,20 @@ const valid_raw = get_file(fh->readdlm(fh,'\t'), serv, "color", "monroe/dev.csv"
 const valid_terms_padded, valid_hsv, encoding = prepare_data(valid_raw)
 const train_terms_padded, train_hsv,  encoding = prepare_data(train_raw, encoding)
 
+include("LSTM.jl")
 
-const batch_size = 64*1000
+const batch_size = 64_000
 n_steps=size(valid_terms_padded,1)-1
 n_classes = nlabel(encoding)+1
 sess, t = color_to_terms_network(n_classes, n_steps;
         hidden_layer_size = 32,
-        embedding_dim = 16,
-        batch_size=batch_size,
-        learning_rate=0.5
-    )
+        embedding_dim = 4,
+        batch_size=batch_size;
+         )
 
 
 ############################
-#obs,pred, oo, pp = run(sess, [Term_obs_onehots, Term_preds_onehots, Term_obs_s_out, Term_preds_s], Dict(X_hsv=>hsv_data, Term_obs_s=>padded_labels))
-train_from_terms!(sess, t, train_terms_padded, train_hsv; epochs=50)
+train_from_terms!(sess, t, train_terms_padded, train_hsv; epochs=5)|
 
 (hsv,terms) = eachbatch(
     shuffleobs((train_hsv, train_terms_padded), obsdim=od);
@@ -33,11 +42,12 @@ LL,TT = run(sess,
     Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))
 
 
+emt=run(sess, t[:EmbeddingTable])
 
-squeeze(mapslices(indmax, LL, 3),3)-1
+LLim=squeeze(mapslices(indmax, LL, 3),3)-1|
 
 
-run(sess, [t[:LL_masked], t[:TT_masked], t[:mask]], Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))
+run(sess, [t[:LL_masked], t[:TT_masked], t[:mask]], Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))|
 
 saver = train.Saver()
 train.save(saver, sess, "./320")

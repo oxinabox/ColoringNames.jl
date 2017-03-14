@@ -1,14 +1,28 @@
 include("../src/LSTM.jl")
 
 using Base.Test
+using TensorFlow
+
+@testset "Trailing dimention matrix product" begin
+    X=rand(5,7,4)
+    Y=rand(4,10);
+    XY = mapslices(X̄->X̄*Y, X,2:3)
+    @assert size(XY) == (5,7,10)
+
+    
+    sess = Session(Graph())
+
+    @test XY == run(sess, trailing_matmul(constant(X),constant(Y)))
+end
+
+
+
+
 @testset "masks" begin
   mask_sess = Session(Graph())
 
   m_val = [1, 0, 2, 4]
   M = constant(m_val)
-
-
-
 
   ### 1D
   maskedM = run(mask_sess, apply_mask(M, get_mask(M)))

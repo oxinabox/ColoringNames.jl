@@ -28,7 +28,6 @@ const morpheme_tokenize = morpheme_tokenizer(rules_path)
 @memoize demarcate(tokens, starter="<S>", ender="</S>") = [starter; tokens; ender]
 
 
-const od =(MLDataUtils.ObsDim.First(), MLDataUtils.ObsDim.Last())
 
 """
 Encodes and packs data
