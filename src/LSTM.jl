@@ -39,12 +39,8 @@ function color_to_terms_network(n_classes, n_steps;
         X_hsv = placeholder(Float32, shape=[batch_size, n_input]; name="X_HSVs")
         Term_obs_s = placeholder(Int32, shape=[n_steps+1, batch_size]; name="Term_obs_s")
 
-        EmbeddingTable = get_variable("TokenEmbeddings",
-                                        [n_classes, embedding_dim],
-                                        Float32;
-                                        initializer=Normal(0, .001),
-                                        trainable=false
-                                        )
+        EmbeddingTable = one_hot(collect(1:314), 314)
+        #EmbeddingTable = get_variable("TokenEmbeddings", [n_classes, embedding_dim], Float32; initializer=Normal(0, .01), trainable=true)
 
 
         #Mangle Terms into shape
@@ -61,40 +57,33 @@ function color_to_terms_network(n_classes, n_steps;
         #X_h = reshape(X_h, [batch_size])
         X_hr = X_h.*2π
         X_col = stack((sin(X_hr), cos(X_hr), X_s-0.5, X_v-0.5); axis=2) #Smooth hue by breaking into cos and sin, and zero mean everything else1
-        Xs = [concat([X_col, T], 2; name="Xs$ii") for (ii,T) in enumerate(Tes)]#Pair color input at each step with previous term
+        Xs = [concat([X_col, T], 2; name="Xs$ii") for (ii,T) in enumerate(Tes)]# Pair color input at each step with previous term
+
 
 
         @show get_shape.(Xs)
-        cell = nn.rnn_cell.LSTMCell(hidden_layer_size)
-        H1s, states = nn.rnn(cell, Xs; dtype=Float32)
-        @show cell
-        @show H1s
-        @show states
+        #cell = nn.rnn_cell.LSTMCell(hidden_layer_size)
+        #H1s, states = nn.rnn(cell, Xs; dtype=Float32)
+        #@show cell
+        #@show H1s
+        #@show states
+        W0 = get_variable("weights0", [get_shape(Xs[1],2), hidden_layer_size], Float32;  initializer=Normal(0, .01))
+        B0 = get_variable("bias0", [hidden_layer_size], Float32;  initializer=Normal(0, .01))
+        H1s = [nn.sigmoid(X*W0+B0) for X in Xs]
+        @show
+        W1 = get_variable("weights1", [hidden_layer_size, n_classes], Float32;  initializer=Normal(0, .01))
+        B1 = get_variable("bias1", [n_classes], Float32;  initializer=Normal(0, .01))
+        LL =  stack([H*W1+B1 for H in H1s])
 
-        W1 = get_variable("weights1", [hidden_layer_size, hidden_layer_size], Float32;  initializer=Normal(0, .1))
-        B1 = get_variable("bias1", [hidden_layer_size], Float32;  initializer=Normal(0, .01))
-        H2 =  stack([H*W1+B1 for H in H1s])
-
-        W2 = get_variable("weights2", [hidden_layer_size, n_classes], Float32;  initializer=Normal(0, .1))
-        B2 = get_variable("bias2", [n_classes], Float32;  initializer=Normal(0, .01))
-
-
-        LL = nn.sigmoid(trailing_matmul(H2, W2) + B2)
-
-        mask = TT .!= Int32(0) #All True
+        mask = (TT .!= Int32(0)) &  (TT .!= Int32(4))
         TT_flat_masked = apply_mask(TT, mask)
         LL_flat_masked = apply_mask(LL, mask)
 
         TT_masked = unwrap_mask(TT_flat_masked, mask, TT)
         LL_masked = unwrap_mask(LL_flat_masked, mask, LL)
 
-        #Term_obs_onehots = one_hot(TT_masked, n_classes)
-        #Term_preds_onehots_log = nn.log_softmax(LL_masked; name="Term_preds_onehots_log")
-        #costs  = reduce_sum(Term_obs_onehots.*Term_preds_onehots_log; reduction_indices=[1])
-
         acc_costs = nn.sparse_softmax_cross_entropy_with_logits(logits=LL_flat_masked, labels=TT_flat_masked+1) #Add one as TT is 0 based
-        l2cost = 0.01 * nn.l2_loss(EmbeddingTable)
-        cost = reduce_mean(acc_costs) + l2cost
+        cost = reduce_mean(acc_costs)
         optimizer = train.minimize(train.AdamOptimizer(learning_rate), cost)
     end
     ########## GET it running

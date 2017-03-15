@@ -35,7 +35,7 @@ sess, t = color_to_terms_network(n_classes, n_steps;
 
 
 ############################
-train_from_terms!(sess, t, train_terms_padded, train_hsv; epochs=1)
+train_from_terms!(sess, t, train_terms_padded, train_hsv; epochs=50)
 
 (hsv,terms) = eachbatch(
     shuffleobs((train_hsv, train_terms_padded), obsdim=od);
@@ -43,55 +43,21 @@ train_from_terms!(sess, t, train_terms_padded, train_hsv; epochs=1)
     obsdim=od) |> first
 
 LL,TT = run(sess,
-    [t[:LL], t[:TT]],
+    [t[:LL_masked], t[:TT]],
     Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))
 
 LLim=squeeze(mapslices(indmax, LL, 3),3)-1
 
+target = mapslices(join, ind2label.(max.(terms[2:end-1,:],1)', encoding), 2)
+pred = mapslices(join, ind2label.(max.(LLim,1)', encoding), 2)
+
+
 emt=run(sess, t[:EmbeddingTable])
-run(sess, t[:B2])
 
+Xs = run(sess,
+    t[:Xs],
+    Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))
 
-run(sess, [t[:Term_obs_s_ins] ,t[:Tes]],  Dict(t[:Term_obs_s]=>terms))
-
-run(sess, [t[:LL_masked], t[:TT_masked], t[:mask]], Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))|
-
-
-
-run(sess, [t[:LL_masked], t[:TT_masked], t[:mask]], Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))
-
-
-cost, acc, perp, preds_o = rough_evalute(sess, t, valid_terms_padded, valid_hsv)
-
-[Pair(a,ind2label(b,encoding)) for (a,b) in sort(reverse.(collect(countmap(train_terms_padded[2,:]))), rev=true)[2:end]]
-
-collect(enumerate(ind2label.(2:50, encoding)))
-
-unique_cols = first.(unique(last, enumerate(eachobs(preds_o))))
-pls = ind2label.(Int.(preds_o[:,unique_cols]), encoding)'
-
-ols_coded=valid_terms_padded
-ols_coded[ols_coded.==0]=1
-ols = ind2label.(Int.(ols_coded[2:end, unique_cols]), encoding)'
-
-join(mapslices(x->join(x," ") , [ols fill("->", size(unique_cols,1)) pls], 2), "\n") |> print
-
-methods(ind2label)
-
-
-
-
-##MASK test code
-#TODO
-if test_it
-      @assert isa(run(sess, cost, Dict(X_hsv=>hsv_data, Term_obs_s=>padded_labels)), Number )
-      ## MASK TEST######################
-      ll, ll2 = run(sess, [ LL_masked,
-          reshape(tile(expand_dims(get_mask(Term_obs_s_out),2),[1,1,8]).*concat(0, expand_dims.(Ls, Scalar(0))), [batch_size*n_steps, n_classes])
-      ], Dict(X_hsv=>hsv_data, Term_obs_s=>padded_labels))
-      @assert ll ≈ ll2
-  end
-
-sess = Session(Graph())
-x = placeholder(Int64)
-run(sess, get(cast(x, Int32)), Dict(x=>2))
+LLm, TTm = run(sess,
+    [t[:LL_flat_masked], t[:TT_flat_masked]],
+    Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))

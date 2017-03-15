@@ -37,6 +37,7 @@ function prepare_data(raw, encoding_=nothing, tokenize=morpheme_tokenize)
     labels = convert(Vector{String}, raw[:,1]);
     hsv_data = convert(Matrix{Float64}, raw[:,2:end]);
     tokenized_labels = demarcate.(tokenize.(labels))
+    
     local encoding
     if encoding_===nothing
         all_tokens = reduce(union, tokenized_labels)
