@@ -17,7 +17,6 @@ function trailing_matmul(A,B)
     A_flat_dims = reduce_prod(A_dims[1:end-1])
 
     Af = reshape(A, stack([A_flat_dims, A_dims[end]]))
-    @show Af
     ABf = Af*B
     AB = reshape(ABf, concat([A_dims[1:end-1], expand_dims(B_dims[end], 1)],1))
     AB
@@ -40,7 +39,12 @@ function color_to_terms_network(n_classes, n_steps;
         X_hsv = placeholder(Float32, shape=[batch_size, n_input]; name="X_HSVs")
         Term_obs_s = placeholder(Int32, shape=[n_steps+1, batch_size]; name="Term_obs_s")
 
-        EmbeddingTable = get_variable("TokenEmbeddings",  [n_classes, embedding_dim], Float32; initializer=Normal(0, .001))
+        EmbeddingTable = get_variable("TokenEmbeddings",
+                                        [n_classes, embedding_dim],
+                                        Float32;
+                                        initializer=Normal(0, .001),
+                                        trainable=false
+                                        )
 
 
         #Mangle Terms into shape
@@ -48,6 +52,7 @@ function color_to_terms_network(n_classes, n_steps;
         TT = stack(Term_obs[2:end]) #Skip first input which will be <S>
 
         Term_obs_s_ins = Term_obs[1:end-1]#Don't want last input "</S>" (or padding character often but we will handle that seperately)
+
         Tes = [gather(EmbeddingTable, term+1) for term in Term_obs_s_ins] #+1 because Gather is 1 indexed
 
 
@@ -57,16 +62,18 @@ function color_to_terms_network(n_classes, n_steps;
         X_hr = X_h.*2π
         X_col = stack((sin(X_hr), cos(X_hr), X_s-0.5, X_v-0.5); axis=2) #Smooth hue by breaking into cos and sin, and zero mean everything else1
         Xs = [concat([X_col, T], 2; name="Xs$ii") for (ii,T) in enumerate(Tes)]#Pair color input at each step with previous term
-        #Xs = [X_col for (ii,T) in enumerate(Tes)]#TODO REMOVE ME
 
 
         @show get_shape.(Xs)
         cell = nn.rnn_cell.LSTMCell(hidden_layer_size)
-        H1s, states = nn.rnn(cell, Xs; dtype=Float32)#, sequence_length=n_steps);
+        H1s, states = nn.rnn(cell, Xs; dtype=Float32)
+        @show cell
+        @show H1s
+        @show states
 
         W1 = get_variable("weights1", [hidden_layer_size, hidden_layer_size], Float32;  initializer=Normal(0, .1))
         B1 = get_variable("bias1", [hidden_layer_size], Float32;  initializer=Normal(0, .01))
-        H2 =  pack([H*W1+B1 for H in H1s])
+        H2 =  stack([H*W1+B1 for H in H1s])
 
         W2 = get_variable("weights2", [hidden_layer_size, n_classes], Float32;  initializer=Normal(0, .1))
         B2 = get_variable("bias2", [n_classes], Float32;  initializer=Normal(0, .01))
@@ -74,7 +81,7 @@ function color_to_terms_network(n_classes, n_steps;
 
         LL = nn.sigmoid(trailing_matmul(H2, W2) + B2)
 
-        mask = TT.!=Int32(-1) #All True
+        mask = TT .!= Int32(0) #All True
         TT_flat_masked = apply_mask(TT, mask)
         LL_flat_masked = apply_mask(LL, mask)
 
@@ -85,8 +92,10 @@ function color_to_terms_network(n_classes, n_steps;
         #Term_preds_onehots_log = nn.log_softmax(LL_masked; name="Term_preds_onehots_log")
         #costs  = reduce_sum(Term_obs_onehots.*Term_preds_onehots_log; reduction_indices=[1])
 
-        costs = nn.sparse_softmax_cross_entropy_with_logits(LL_flat_masked, TT_flat_masked+1) #Add one as TT is 0 based
-        optimizer = train.minimize(train.AdamOptimizer(learning_rate), costs)
+        acc_costs = nn.sparse_softmax_cross_entropy_with_logits(logits=LL_flat_masked, labels=TT_flat_masked+1) #Add one as TT is 0 based
+        l2cost = 0.01 * nn.l2_loss(EmbeddingTable)
+        cost = reduce_mean(acc_costs) + l2cost
+        optimizer = train.minimize(train.AdamOptimizer(learning_rate), cost)
     end
     ########## GET it running
 
@@ -99,16 +108,17 @@ end
 const od =(MLDataUtils.ObsDim.First(), MLDataUtils.ObsDim.Last())
 
 function train_from_terms!(sess, t::Associative{Symbol}, train_terms_padded, train_hsv; epochs=3)
-    local costs_o
+    costs_o = Float64[]
     @progress "Epochs" for ii in 1:epochs
         @show ii
         data = shuffleobs((train_hsv, train_terms_padded); obsdim=od)
         #data = undersample((train_hsv, train_terms_padded); obsdim=od, shuffleobs=true)
         batchs = eachbatch(data; size=batch_size, obsdim=od)
         @progress "Batches" for (hsv,terms) in batchs
-            costs_o, optimizer_o = run(sess,
-                [t[:costs], t[:optimizer]],
+            cost_o, optimizer_o = run(sess,
+                [t[:cost], t[:optimizer]],
             Dict(t[:X_hsv]=>hsv, t[:Term_obs_s]=>terms))
+            push!(costs_o, cost_o)
         end
     end
     mean(costs_o)
