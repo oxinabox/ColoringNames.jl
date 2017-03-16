@@ -22,7 +22,7 @@ const train_hsv = valid_hsv
 #const train_raw = get_file(fh->readdlm(fh,'\t'), serv, "color", "monroe/train.csv")
 #const train_terms_padded, train_hsv,  encoding = prepare_data(train_raw, encoding)
 
-include("LSTM.jl")
+include("col2term_bigram.jl")
 
 const batch_size = 64_000
 n_steps=size(valid_terms_padded,1)-1
