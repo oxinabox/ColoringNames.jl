@@ -33,11 +33,14 @@ const morpheme_tokenize = morpheme_tokenizer(rules_path)
 Encodes and packs data
 Returns the packed data and the encoder.
 """
-function prepare_data(raw, encoding_=nothing, tokenize=morpheme_tokenize)
+function prepare_data(raw, encoding_=nothing; do_demacate=true, tokenizer=morpheme_tokenize)
     labels = convert(Vector{String}, raw[:,1]);
     hsv_data = convert(Matrix{Float64}, raw[:,2:end]);
-    tokenized_labels = demarcate.(tokenize.(labels))
-    
+    tokenized_labels = tokenizer.(labels)
+    if do_demacate
+        tokenized_labels = demarcate.(tokenized_labels)
+    end
+
     local encoding
     if encoding_===nothing
         all_tokens = reduce(union, tokenized_labels)
@@ -47,5 +50,6 @@ function prepare_data(raw, encoding_=nothing, tokenize=morpheme_tokenize)
     end
 
     label_inds = map(toks->label2ind.(toks, Scalar(encoding)), tokenized_labels)
-    rpad_to_matrix(label_inds), hsv_data, encoding
+
+     hsv_data, rpad_to_matrix(label_inds), encoding
 end

@@ -13,27 +13,27 @@ using StatsBase
 const serv=SwiftService()
 
 const valid_raw = get_file(fh->readdlm(fh,'\t'), serv, "color", "monroe/dev.csv")
-const valid_terms_padded, valid_hsv, encoding = prepare_data(valid_raw)
+const valid_hsv, valid_terms_padded, encoding = prepare_data(valid_raw; do_demacate=false)
 
 const train_raw = valid_raw
 const train_terms_padded = valid_terms_padded
 const train_hsv = valid_hsv
 
 #const train_raw = get_file(fh->readdlm(fh,'\t'), serv, "color", "monroe/train.csv")
-#const train_terms_padded, train_hsv,  encoding = prepare_data(train_raw, encoding)
+#const train_hsv, train_terms_padded, encoding = prepare_data(train_raw; do_demacate=false)
 
 include("term2col.jl")
 
 const batch_size = 64_000
 n_steps=size(valid_terms_padded,1)-1
 n_classes = nlabel(encoding)+1
-ss = terms_to_color_network(n_classes, n_steps;
+sess = terms_to_color_network(n_classes, n_steps;
         hidden_layer_size = 64,
         embedding_dim = 4,
         batch_size=batch_size;
         )
-
-run(ss, ss["terms_emb"], Dict(ss["terms"]=>valid_terms_padded))
+ss = sess.graph
+run(sess, ss["terms_emb"], Dict(ss["terms"]=>valid_terms_padded))
 
 ############################
 train_from_cols!(sess, t, train_terms_padded, train_hsv; epochs=50)
