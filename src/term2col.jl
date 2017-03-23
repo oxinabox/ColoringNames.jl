@@ -20,9 +20,9 @@ function terms_to_color_network(n_classes, n_steps;
         cell = nn.rnn_cell.GRUCell(hidden_layer_size)
         Hs, states = nn.rnn(cell, terms_emb, term_lengths; dtype=Float32)
         W = get_variable((hidden_layer_size,2+1+1), Float32)
-        Ws = sigmoid(W*Hs[end])
-
-        Math.atan2(Ws[1,:])
+        Zhue = tanh(Hs[end]*W[:,1:2])
+        Yhue = Math.atan2(zhue[:,2], zhue[:,1])./π + 1 #bring to 0,1 range
+        Ysat
 
     end
     run(sess, global_variables_initializer())
