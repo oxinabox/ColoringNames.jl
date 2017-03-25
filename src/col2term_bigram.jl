@@ -72,7 +72,7 @@ function color_to_terms_network(n_classes, n_steps;
 end
 
 
-const od =(MLDataUtils.ObsDim.First(), MLDataUtils.ObsDim.Last())
+
 
 function train_from_terms!(sess, t::Associative{Symbol}, train_terms_padded, train_hsv; epochs=3)
     costs_o = Float64[]

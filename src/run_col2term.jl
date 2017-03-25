@@ -9,7 +9,7 @@ using StaticArrays
 using Juno
 using StatsBase
 
-
+const od =(MLDataUtils.ObsDim.First(), MLDataUtils.ObsDim.Last())
 const serv=SwiftService()
 
 const valid_raw = get_file(fh->readdlm(fh,'\t'), serv, "color", "monroe/dev.csv")
