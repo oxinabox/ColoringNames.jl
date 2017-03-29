@@ -29,13 +29,13 @@ function terms_to_color_network(n_classes, n_steps;
         Ysatval = nn.sigmoid(Z[:,3:4])
         Yhuesatval = concat([expand_dims(Yhue, 2), Ysatval], 2)
 
-        Yhuesatval_obs = placeholder(Float32; shape=[3, batch_size])
+        Yhuesatval_obs = placeholder(Float32; shape=[batch_size, 3])
 
         cost = reduce_mean(squared_difference(Yhuesatval_obs, Yhuesatval))
         optimizer = train.minimize(train.AdamOptimizer(), cost)
     end
     run(sess, global_variables_initializer())
-    sess
+    sess, optimizer
 end
 
 
