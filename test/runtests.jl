@@ -3,6 +3,7 @@ using Base.Test
 using MLDataUtils
 
 tests = [
+    "prob.jl"
     "input.jl",
     "util.jl",
 ]
