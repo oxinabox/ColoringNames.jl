@@ -49,8 +49,6 @@ end
     @test vonmiseshot(0.0, 10) ≈  vonmiseshot(-pi, 10, -pi, pi)
     @test vonmiseshot(0.0, 10) ≈ vonmiseshot(1.0, 10)
 
-
-
     for val in 0:0.01:1
         res=vonmiseshot(val, 256)
         test_ispmf(res)

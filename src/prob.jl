@@ -2,7 +2,7 @@
 
 using Distributions
 
-export gaussianhot, vonmiseshot
+export gaussianhot, vonmiseshot, gaussianhot!, vonmiseshot!
 
 
 function range_scale(val, curlow, curhigh, newlow, newhigh)
