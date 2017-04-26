@@ -1,8 +1,9 @@
 
-function terms_to_color_network(n_classes, n_steps;
+function terms_to_color_dist_network(n_classes, n_steps;
         batch_size = 128,
         hidden_layer_size = 256,
         embedding_dim = 16,
+        output_res = 256,
         learning_rate=0.05
     )
 
@@ -18,12 +19,26 @@ function terms_to_color_network(n_classes, n_steps;
         terms_emb = gather(emb_table, terms+1)
 
         cell = nn.rnn_cell.GRUCell(hidden_layer_size)
-
-
         Hs, states = nn.rnn(cell, terms_emb, term_lengths; dtype=Float32, time_major=true)
-        W = get_variable((hidden_layer_size,2+1+1), Float32)
 
-        Z = Hs[end]*W
+        Z = Hs[end]
+
+        Whue = get_variable((hidden_layer_size, output_res), Float32)
+        Bhue = get_variable((output_res), Float32)
+        Wsat = get_variable((hidden_layer_size, output_res), Float32)
+        Bsat = get_variable((output_res), Float32)
+        Wval = get_variable((hidden_layer_size, output_res), Float32)
+        Bval = get_variable((output_res), Float32)
+
+        Yhue_logit = Z*Whue + Bhue
+        Ysat_logit = Z*Wsat + Bsat
+        Yval_logit = Z*Wval + Bval
+
+        Yhue = nn.softmax(Yhue_logit)
+        Ysat = nn.softmax(Ysat_logit)
+        Yval = nn.softmax(Yval_logit)
+        
+
         Yhue = Base.Math.atan2(Z[:,2], Z[:,1])/π + 1 #bring to 0,1 range
         Ysatval = nn.sigmoid(Z[:,3:4])
         Yhuesatval = concat([expand_dims(Yhue, 2), Ysatval], 2)
