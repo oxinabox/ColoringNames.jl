@@ -2,7 +2,7 @@
 
 using Distributions
 
-export gaussianhot, vonmiseshot, gaussianhot!, vonmiseshot!
+export gaussianhot, vonmiseshot, gaussianhot!, vonmiseshot!, splay_probabilities
 
 
 function range_scale(val, curlow, curhigh, newlow, newhigh)
@@ -57,4 +57,22 @@ function vonmiseshot!{T}(bins::AbstractVector{T}, value, range_min=zero(T), rang
     kappa = inv(stddev)
     distr = VonMises(scaled_value, kappa)
     discretize!(bins, distr, -π, π)
+end
+
+"""
+Takes in a matrix of HSVs for colors,
+and encodes it as if each value was the expected value of a Gaussian (for S and V), or VonVises distribution,
+and returns a histogram for each.
+"""
+function splay_probabilities(hsv, nbins, stddev=1/nbins)
+    num_obs =  nobs(hsv, ObsDim.First())
+    hp = Matrix{Float32}((nbins, num_obs))
+    sp = Matrix{Float32}((nbins, num_obs))
+    vp = Matrix{Float32}((nbins, num_obs))
+    @progress for (ii, obs) in enumerate(eachobs(hsv, ObsDim.First()))
+        vonmiseshot!(@view(hp[:,ii]), hsv[1], stddev)
+        gaussianhot!(@view(sp[:,ii]), hsv[2], stddev)
+        gaussianhot!(@view(vp[:,ii]), hsv[3], stddev)
+    end
+    (hp, sp, vp)
 end

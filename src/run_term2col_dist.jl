@@ -26,19 +26,8 @@ const train_text = valid_text
 #const train_hsv, train_terms_padded, encoding = prepare_data(train_raw; do_demacate=false)
 
 
-function splay_probabilities(hsv, nbins, stddev=1/nbins)
-    num_obs =  nobs(hsv, ObsDim.First())
-    hp = Matrix{Float32}((nbins, num_obs))
-    sp = Matrix{Float32}((nbins, num_obs))
-    vp = Matrix{Float32}((nbins, num_obs))
-    @progress for (ii, obs) in enumerate(eachobs(hsv, ObsDim.First()))
-        vonmiseshot!(@view(hp[:,ii]), hsv[1], stddev)
-        gaussianhot!(@view(sp[:,ii]), hsv[2], stddev)
-        gaussianhot!(@view(vp[:,ii]), hsv[3], stddev)
-    end
-    (hp, sp, vp)
-end
+
 
 valid_hp, valid_sp, valid_vp =  splay_probabilities(valid_hsv, 256)
 
-include("term2col_dist.jl")
+include("term2col_dist.jl")|
