@@ -93,9 +93,9 @@ function splay_probabilities(hsv, nbins, stddev=1/nbins)
     sp = Matrix{Float32}((nbins, num_obs))
     vp = Matrix{Float32}((nbins, num_obs))
     @progress for (ii, obs) in enumerate(eachobs(hsv, ObsDim.First()))
-        gaussianwraparoundhot!(@view(hp[:,ii]), hsv[1], stddev)
-        gaussianhot!(@view(sp[:,ii]), hsv[2], stddev)
-        gaussianhot!(@view(vp[:,ii]), hsv[3], stddev)
+        gaussianwraparoundhot!(@view(hp[:,ii]), hsv[ii, 1], stddev)
+        gaussianhot!(@view(sp[:,ii]), hsv[ii, 2], stddev)
+        gaussianhot!(@view(vp[:,ii]), hsv[ii, 3], stddev)
     end
     (hp, sp, vp)
 end
