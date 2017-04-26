@@ -53,5 +53,36 @@ end
         res=vonmiseshot(val, 256)
         test_ispmf(res)
     end
-
 end
+
+
+@testset "gaussianwraparoundhot" begin
+
+    res=gaussianwraparoundhot(0.51, 10)
+    @test all(res[6].>res[1:5])
+    @test all(res[6].>res[7:end])
+    @test all(res[end-1].>res[end])
+    test_ispmf(res, 0.2)
+    @test length(res)==10
+
+    res=gaussianwraparoundhot(-pi, 10, -pi, pi)
+    @test res[1] ≈ res[end]
+    @test res[2] ≈ res[end-1]
+    @test res[2]<res[1]
+
+    @test gaussianwraparoundhot(0.0, 10) ≈  gaussianwraparoundhot(-pi, 10, -pi, pi)
+    @test gaussianwraparoundhot(0.0, 10) ≈ gaussianwraparoundhot(1.0, 10)
+
+    for val in 0:0.01:1
+        res=gaussianwraparoundhot(val, 256)
+        test_ispmf(res)
+    end
+end
+
+#=
+using Plots
+gr()
+bar(gaussianwraparoundhot(0.51, 10))
+
+bar(gaussianwraparoundhot(-pi, 10, -pi, pi))
+=#

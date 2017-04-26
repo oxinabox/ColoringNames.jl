@@ -26,8 +26,7 @@ const train_text = valid_text
 #const train_hsv, train_terms_padded, encoding = prepare_data(train_raw; do_demacate=false)
 
 
-
-
 valid_hp, valid_sp, valid_vp =  splay_probabilities(valid_hsv, 256)
+
 
 include("term2col_dist.jl")|
