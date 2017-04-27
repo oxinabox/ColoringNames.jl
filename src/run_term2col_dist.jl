@@ -38,12 +38,18 @@ sess, optimizer = terms_to_color_dist_network(n_classes, n_steps;
                                             batch_size = batch_size,
                                             hidden_layer_size = 256,
                                             learning_rate = 0.5)
-costs_o = train_to_color_dist!(sess, optimizer, batch_size, output_res, train_terms_padded, train_hsv; epochs=30)
-#######################
+costs_o = train_to_color_dist!(sess, optimizer, batch_size, output_res, train_terms_padded, train_hsv; epochs=5000)
 
-data = shuffleobs((train_hsv, train_terms_padded); obsdim=od)
+#######################
+# Lets look at the output
+
+
+#data = shuffleobs((train_hsv, train_terms_padded); obsdim=od)
+data = (train_hsv, train_terms_padded)
 hsv, terms = eachbatch(data; size=batch_size, obsdim=od) |> first
 hp_obs, sp_obs, vp_obs = splay_probabilities(hsv, output_res)
+
+
 
 ss=sess.graph
 hp, sp, vp = run(
@@ -65,13 +71,43 @@ hp, sp, vp = run(
 using Plots
 gr()
 
-ii=103
+
+ii=5
 bar(
     [hp[ii,:] hp_obs[:,ii] sp[ii,:] sp_obs[:,ii] vp[ii,:] vp_obs[:,ii]],
     legend = false,
     #title = ["h", "h_obs", "s", "s_obs", "v_obs"],
     layout=(3,2))
 
+#expected output
+same_terms = 1:21
+bar(
+    [hp[first(same_terms),:], mean(hp_obs[:,same_terms], 2)],
+    legend = false,
+    layout = (2,1)
+    )
+
+
+
+##############
+# Check Biases
+using StatsFuns
+
+hb, sb, vb = run(
+    sess,
+    [
+        ss["B_hue"],
+        ss["B_sat"],
+        ss["B_val"]
+    ]
+)
+
+
+bar(
+    softmax.([hb, sb, vb]),
+    legend = false,
+    #title = ["h", "h_obs", "s", "s_obs", "v_obs"],
+    layout=(3,1))
 
 
 
@@ -82,9 +118,4 @@ bar(
 
 
 
-
-
-
-
-
-'|
+#EOF

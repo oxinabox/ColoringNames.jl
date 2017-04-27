@@ -23,11 +23,16 @@ function terms_to_color_dist_network(n_term_classes, n_steps;
         cell = nn.rnn_cell.GRUCell(hidden_layer_size)
         Hs, states = nn.rnn(cell, terms_emb, term_lengths; dtype=Float32, time_major=true)
 
-        Z = Hs[end]
+        W1 = get_variable((hidden_layer_size, hidden_layer_size), Float32)
+        B1 = get_variable((hidden_layer_size), Float32)
+
+        Z1 = nn.relu(Hs[end]*W1 + B1)
+
+
         function declare_output_layer(name)
             W = get_variable("W_$name", (hidden_layer_size, output_res), Float32)
             B = get_variable("B_$name", (output_res), Float32)
-            Y_logit = Z*W + B
+            Y_logit = Z1*W + B
             Y = nn.softmax(Y_logit; name="Yp_$name")
             Y_obs = placeholder(Float32; shape=[output_res, batch_size], name="Yp_obs_$name")'
             loss = nn.softmax_cross_entropy_with_logits(;labels=Y_obs, logits=Y_logit, name="loss_$name")
@@ -50,18 +55,15 @@ function train_to_color_dist!(sess, optimizer, batch_size, output_res, train_ter
     ss = sess.graph
     costs_o = Float64[]
 
-    hp_obs = Matrix{Float32}((output_res, batch_size))
-    sp_obs = Matrix{Float32}((output_res, batch_size))
-    vp_obs = Matrix{Float32}((output_res, batch_size))
-
+    hsv_arrays = splay_probabilities(train_hsv, output_res)
+    #hp_obs, sp_obs, vp_obs
 
     @progress "Epochs" for ii in 1:epochs
         @show ii
-        data = shuffleobs((train_hsv, train_terms_padded); obsdim=od)
-        batchs = eachbatch(data; size=batch_size, obsdim=od)
+        data = shuffleobs((hsv_arrays..., train_terms_padded))
+        batchs = eachbatch(data; size=batch_size)
 
-        @progress "Batches" for (hsv, terms) in batchs
-            splay_probabilities!(hp_obs, sp_obs, vp_obs, hsv)
+        @progress "Batches" for (hp_obs, sp_obs, vp_obs, terms) in batchs
 
             cost_o, optimizer_o = run(
                 sess,
