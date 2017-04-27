@@ -3,7 +3,10 @@ import Juno: @progress
 using Distributions
 using CatViews
 
-export gaussianhot, vonmiseshot, gaussianwraparoundhot, gaussianhot!, vonmiseshot!, splay_probabilities
+export gaussianhot, gaussianhot!,
+    vonmiseshot, vonmiseshot!,
+    gaussianwraparoundhot, gaussianwraparoundhot!,
+    splay_probabilities, splay_probabilities!
 
 
 function range_scale(val, curlow, curhigh, newlow, newhigh)
@@ -92,6 +95,16 @@ function splay_probabilities(hsv, nbins, stddev=1/nbins)
     hp = Matrix{Float32}((nbins, num_obs))
     sp = Matrix{Float32}((nbins, num_obs))
     vp = Matrix{Float32}((nbins, num_obs))
+
+    splay_probabilities!(hp,sp,vp, hsv; stddev=stddev)
+end
+
+"""
+Inplace verson of `splay_probabilities`
+places results into hp, sp, valtype
+"""
+function splay_probabilities!(hp,sp,vp, hsv; stddev=1/size(hp,1))
+    @assert(size(hp) == size(sp) == size(vp))
     @progress for (ii, obs) in enumerate(eachobs(hsv, ObsDim.First()))
         gaussianwraparoundhot!(@view(hp[:,ii]), hsv[ii, 1], stddev)
         gaussianhot!(@view(sp[:,ii]), hsv[ii, 2], stddev)
