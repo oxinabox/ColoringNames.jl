@@ -4,7 +4,8 @@ function terms_to_color_dist_network(n_term_classes, n_steps;
         hidden_layer_size = 512,
         embedding_dim = 16,
         output_res = 256,
-        learning_rate=0.05
+        learning_rate=0.05,
+
     )
 
     graph = Graph()
@@ -13,6 +14,7 @@ function terms_to_color_dist_network(n_term_classes, n_steps;
     ###################################
 
     @tf begin
+        keep_prob = placeholder(Float32; shape=[])
 
         terms = placeholder(Int32; shape=[n_steps, batch_size])
         term_lengths = indmin(terms, 1) - 1 #Last index is the one before the first occurance of 0 (the minimum element) Would be faster if could use find per dimentions
@@ -20,19 +22,22 @@ function terms_to_color_dist_network(n_term_classes, n_steps;
         emb_table = get_variable((n_term_classes, embedding_dim), Float32)
         terms_emb = gather(emb_table, terms+1)
 
-        cell = nn.rnn_cell.GRUCell(hidden_layer_size)
+        cell = nn.rnn_cell.DropoutWrapper(nn.rnn_cell.GRUCell(hidden_layer_size), keep_prob)
         Hs, states = nn.rnn(cell, terms_emb, term_lengths; dtype=Float32, time_major=true)
 
         W1 = get_variable((hidden_layer_size, hidden_layer_size), Float32)
         B1 = get_variable((hidden_layer_size), Float32)
+        Z1 = nn.dropout(nn.relu(Hs[end]*W1 + B1), keep_prob)
 
-        Z1 = nn.relu(Hs[end]*W1 + B1)
 
+        W2 = get_variable((hidden_layer_size, hidden_layer_size), Float32)
+        B2 = get_variable((hidden_layer_size), Float32)
+        Z2 = nn.dropout(nn.relu(Z1*W2 + B2), keep_prob)
 
         function declare_output_layer(name)
             W = get_variable("W_$name", (hidden_layer_size, output_res), Float32)
             B = get_variable("B_$name", (output_res), Float32)
-            Y_logit = Z1*W + B
+            Y_logit = Z2*W + B
             Y = nn.softmax(Y_logit; name="Yp_$name")
             Y_obs = placeholder(Float32; shape=[output_res, batch_size], name="Yp_obs_$name")'
             loss = nn.softmax_cross_entropy_with_logits(;labels=Y_obs, logits=Y_logit, name="loss_$name")
@@ -51,7 +56,7 @@ end
 
 
 
-function train_to_color_dist!(sess, optimizer, batch_size, output_res, train_terms_padded, train_hsv; epochs=3)
+function train_to_color_dist!(sess, optimizer, batch_size, output_res, train_terms_padded, train_hsv; epochs=3, dropout_keep_prob=0.5f0)
     ss = sess.graph
     costs_o = Float64[]
 
@@ -59,7 +64,7 @@ function train_to_color_dist!(sess, optimizer, batch_size, output_res, train_ter
     #hp_obs, sp_obs, vp_obs
 
     @progress "Epochs" for ii in 1:epochs
-        @show ii
+
         data = shuffleobs((hsv_arrays..., train_terms_padded))
         batchs = eachbatch(data; size=batch_size)
 
@@ -72,6 +77,7 @@ function train_to_color_dist!(sess, optimizer, batch_size, output_res, train_ter
                     optimizer
                 ],
                 Dict(
+                    ss["keep_prob"]=>dropout_keep_prob,
                     ss["terms"]=>terms,
                     ss["Yp_obs_hue"]=>hp_obs,
                     ss["Yp_obs_sat"]=>sp_obs,
@@ -80,6 +86,7 @@ function train_to_color_dist!(sess, optimizer, batch_size, output_res, train_ter
             )
 
             push!(costs_o, cost_o)
+            @show ii costs_o[end]
         end
     end
     costs_o

@@ -105,7 +105,7 @@ places results into hp, sp, valtype
 """
 function splay_probabilities!(hp,sp,vp, hsv; stddev=1/size(hp,1))
     @assert(size(hp) == size(sp) == size(vp))
-    @progress for (ii, obs) in enumerate(eachobs(hsv, ObsDim.First()))
+    @progress "splaying probabilities" for (ii, obs) in enumerate(eachobs(hsv, ObsDim.First()))
         gaussianwraparoundhot!(@view(hp[:,ii]), hsv[ii, 1], stddev)
         gaussianhot!(@view(sp[:,ii]), hsv[ii, 2], stddev)
         gaussianhot!(@view(vp[:,ii]), hsv[ii, 3], stddev)
