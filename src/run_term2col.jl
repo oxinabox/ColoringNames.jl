@@ -65,8 +65,8 @@ od_with_text = (od..., LearnBase.ObsDim.Last())
 hsv_pred = run(sess, ss["Yhuesatval"], Dict(ss["terms"]=>terms))
 
 
-col_pred = mapslices(x->RGB(HSV(360*x[1], x[2], x[3])), hsv_pred, 2)
-col_obs = mapslices(x->RGB(HSV(360*x[1], x[2], x[3])), hsv_obs, 2)
+col_pred = hsv2colorant(hsv_pred)
+col_obs = hsv2colorant(hsv_obs)
 
 show_idx=rand(1:batch_size, 20)
 plot_colors(col_pred[show_idx], col_obs[show_idx];

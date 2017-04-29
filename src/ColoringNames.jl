@@ -6,7 +6,7 @@ using Memoize
 using StaticArrays
 using TensorFlow
 
-export morpheme_tokenizer, morpheme_tokenize, demarcate, rpad_to_matrix, @names_from, prepare_data
+export morpheme_tokenizer, morpheme_tokenize, demarcate, rpad_to_matrix, @names_from, prepare_data, prepare_labels
 
 include("util.jl")
 include("tf_extra.jl")

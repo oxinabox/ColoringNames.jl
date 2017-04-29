@@ -1,5 +1,9 @@
 using Plots
-export plot_colors
+export plot_colors, hsv2colorant
+
+"Converts and array 3 values between 0 and 1 for HSV to a colorant"
+hsv2colorant(x) = RGB(HSV(360*x[1], x[2], x[3]))
+hsv2colorant(hsvs::Matrix) = mapslices(x->RGB(HSV(360*x[1], x[2], x[3])), hsvs, 2)
 
 pyplot() # Can't trust GR not to mess up colors
 
@@ -44,3 +48,17 @@ plot_colors([:red, :green, :blue], [:black, :white, colorant"black"];
 plot_colors([:red, :green, :blue], [:black, :white, colorant"black"];
             row_names=["a", "b", "c"],
             column_names=["X","Y"])
+
+"Plots a histograms of HSV"
+function plot_hsv(hp::Vector, sp::Vector, vp::Vector)
+    hp, sp, vp = query(input)
+    nbins = length(hp)
+    @assert nbins == length(sp) == length(vp)
+    h_max, s_max, v_max = (indmax.([hp, sp, vp]))/nbins
+    @show h_max, s_max, v_max
+    h_bar_colors = ColoringNames.hsv2colorant([linspace(0.0,1.0, nbins) s_max*ones(nbins) v_max*ones(nbins)])
+    s_bar_colors = ColoringNames.hsv2colorant([h_max*ones(nbins) linspace(0.0,1.0, nbins) v_max*ones(nbins)])
+    v_bar_colors = ColoringNames.hsv2colorant([h_max*ones(nbins) s_max*ones(nbins) linspace(0.0,1.0, nbins)])
+    #
+    bar([hp, sp, vp], legend = false, layout=(1,3), linewidth=0, seriescolor=[h_bar_colors s_bar_colors v_bar_colors])
+end
