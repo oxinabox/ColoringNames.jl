@@ -101,7 +101,7 @@ end
 
 """
 Inplace verson of `splay_probabilities`
-places results into hp, sp, valtype
+places results into hp, sp, vp for probabilities of hue, saturation and value
 """
 function splay_probabilities!(hp,sp,vp, hsv; stddev=1/size(hp,1))
     @assert(size(hp) == size(sp) == size(vp))

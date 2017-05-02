@@ -1,10 +1,5 @@
 using Plots
-export plot_colors, hsv2colorant
-
-"Converts and array 3 values between 0 and 1 for HSV to a colorant"
-hsv2colorant(x) = RGB(HSV(360*x[1], x[2], x[3]))
-hsv2colorant(hsvs::Matrix) = mapslices(x->RGB(HSV(360*x[1], x[2], x[3])), hsvs, 2)
-
+export plot_colors
 pyplot() # Can't trust GR not to mess up colors
 
 """
