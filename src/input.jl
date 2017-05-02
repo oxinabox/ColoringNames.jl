@@ -35,7 +35,7 @@ Returns the packed data and the encoder.
 """
 function prepare_data(raw, encoding_=nothing; do_demacate=true, tokenizer=morpheme_tokenize)
     labels = convert(Vector{String}, raw[:,1]);
-    labels_padded, encoding = prepare_labels(labels, encoding_=encoding_; do_demacate=do_demacate, tokenizer=tokenizer)
+    labels_padded, encoding = prepare_labels(labels, encoding_; do_demacate=do_demacate, tokenizer=tokenizer)
 
     hsv_data = convert(Matrix{Float32}, raw[:,2:end]);
     hsv_data, labels_padded, encoding

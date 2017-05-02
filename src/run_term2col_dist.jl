@@ -55,7 +55,8 @@ sess2, _ = terms_to_color_dist_network(n_classes, n_steps;
                                             embedding_dim = 32,
                                             hidden_layer_size = 256,
                                             learning_rate = 0.5)
-sess2 = train.restore(saver, sess2, save_path)
+saver2 = train.Saver()
+train.restore(saver2, sess2, save_path)
 
 #######################
 # Lets look at the output
