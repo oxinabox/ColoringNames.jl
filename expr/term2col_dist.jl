@@ -91,3 +91,36 @@ function train_to_color_dist!(sess, optimizer, batch_size, output_res, train_ter
     end
     costs_o
 end
+
+
+function querier(sess, batch_size, n_steps; encoding=encoding)
+    function query(input_text)
+        label = SubString(input_text, 1) #HACK to get String->SubString
+        labels, _ = ColoringNames.prepare_labels([label], encoding, do_demacate=false)
+
+        nsteps_to_pad = n_steps - size(labels,1)
+        nbatch_items_to_pad = batch_size - size(labels,2)
+
+        padded_labels = [[labels; zeros(Int, nsteps_to_pad)] zeros(Int, (n_steps, nbatch_items_to_pad))]
+        ss=sess.graph
+        hp, sp, vp = run(
+            sess,
+            [
+                ss["Yp_hue"],
+                ss["Yp_sat"],
+                ss["Yp_val"]
+            ],
+            Dict(
+                ss["keep_prob"]=>1.0f0,
+                ss["terms"]=>padded_labels,
+            )
+        )
+
+        hp[1,:], sp[1,:], vp[1,:]
+    end
+end
+
+
+
+
+

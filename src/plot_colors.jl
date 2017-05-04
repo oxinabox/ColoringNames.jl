@@ -1,5 +1,5 @@
 using Plots
-export plot_colors
+export plot_colors, plot_hsv
 pyplot() # Can't trust GR not to mess up colors
 
 """
@@ -46,7 +46,6 @@ plot_colors([:red, :green, :blue], [:black, :white, colorant"black"];
 
 "Plots a histograms of HSV"
 function plot_hsv(hp::Vector, sp::Vector, vp::Vector)
-    hp, sp, vp = query(input)
     nbins = length(hp)
     @assert nbins == length(sp) == length(vp)
     h_max, s_max, v_max = (indmax.([hp, sp, vp]))/nbins
@@ -57,3 +56,5 @@ function plot_hsv(hp::Vector, sp::Vector, vp::Vector)
     #
     bar([hp, sp, vp], legend = false, layout=(1,3), linewidth=0, seriescolor=[h_bar_colors s_bar_colors v_bar_colors])
 end
+
+

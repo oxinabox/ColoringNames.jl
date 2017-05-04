@@ -79,6 +79,21 @@ end
     end
 end
 
+
+
+@testset "Find_bin" begin
+    @test find_bin(0.0, 64) == 1
+    @test find_bin(1.0, 64) == 64
+    @test find_bin(0.5, 64) == 32
+    @test find_bin(0.4999, 64) == 32
+    @test find_bin(0.5001, 64) == 32
+
+    n_bins = 20
+    for ii in 1.0:n_bins
+        @test find_bin(ii, 20, 0.0, n_bins) == Int(ii)
+    end
+end
+
 #=
 using Plots
 gr()

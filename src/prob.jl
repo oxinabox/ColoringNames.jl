@@ -6,7 +6,8 @@ using CatViews
 export gaussianhot, gaussianhot!,
     vonmiseshot, vonmiseshot!,
     gaussianwraparoundhot, gaussianwraparoundhot!,
-    splay_probabilities, splay_probabilities!
+    splay_probabilities, splay_probabilities!,
+    find_bin
 
 
 function range_scale(val, curlow, curhigh, newlow, newhigh)
@@ -19,6 +20,8 @@ function range_scale(val, curlow, curhigh, newlow, newhigh)
     newval = newlow + pos*(newhigh - newlow)
     newval
 end
+
+
 
 function discretize(distr, nbins, range_min, range_max)
     discretize!(Vector(nbins), distr, range_min, range_max)
@@ -111,4 +114,12 @@ function splay_probabilities!(hp,sp,vp, hsv; stddev=1/size(hp,1))
         gaussianhot!(@view(vp[:,ii]), hsv[ii, 3], stddev)
     end
     (hp, sp, vp)
+end
+
+
+"Determine which bin a continous value belongs in"
+function find_bin(value, nbins, range_min=0.0, range_max=1.0)
+    portion = nbins * value/(range_max-range_min)
+
+    clamp(round(Int, portion), 1, nbins)
 end
