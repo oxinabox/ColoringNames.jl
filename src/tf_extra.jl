@@ -1,4 +1,4 @@
-export get_mask, apply_mask, unwrap_mask
+export trailing_matmul
 
 function Base.Math.atan2{T1,T2}(y::Tensor{T1}, x::Tensor{T2}, ϵ=1.0e-12)
     TensorFlow.with_op_name("ATan2") do
@@ -17,11 +17,6 @@ function Base.Math.atan2{T1,T2}(y::Tensor{T1}, x::Tensor{T2}, ϵ=1.0e-12)
         Θ
     end
 end
-
-
-get_mask(V)=cast(V, Bool)
-apply_mask(V, mask) = gather_nd(V, find(mask))
-unwrap_mask(masked_vals, mask, original_vals) =  scatter_nd(find(mask), masked_vals, size(original_vals))
 
 
 """

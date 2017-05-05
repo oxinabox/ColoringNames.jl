@@ -24,6 +24,7 @@ const train_text = train_raw[:, 1]
 
 
 save_path = joinpath(Pkg.dir("ColoringNames"), "models", "1.jld")
+log_path = joinpath(Pkg.dir("ColoringNames"), "logs")
 include("term2col_dist.jl")
 
 batch_size = size(valid_terms_padded,2)
@@ -59,31 +60,33 @@ sess, _ = terms_to_color_dist_network(n_classes, n_steps;
 
 train.restore(train.Saver(), sess, save_path)
 
-
+summary_writer = train.SummaryWriter(log_path)
+write(summary_writer, sess.graph)
+close(summary_writer)
 #########
 # calculate binned-perplexity
-Y_obs_hue = valid_hsv[:,1]
-Y_obs_sat = valid_hsv[:,2]
-Y_obs_val = valid_hsv[:,3]
-
-
-
-function descretized_perplexity(obs, softmax_results, output_res)
-    bin_obs = find_bin(obs, output_res)
-    exp(sum(log(softmax_results[bin_obs])))
-end
 
 
 gg=sess.graph
-Yp_hue = run(sess, gg["Yp_hue"],  Dict(gg["terms"]=>valid_terms_padded, gg["keep_prob"]=>1.0))
+Yp_hue, Yp_sat, Yp_val = run(sess, [gg["Yp_hue"], gg["Yp_sat"], gg["Yp_val"]],  Dict(gg["terms"]=>valid_terms_padded, gg["keep_prob"]=>1.0))
 
-descretized_perplexity(Yp_obs_hue, , output_res)
+Y_obs_hue = valid_hsv[:, 1]
+Y_obs_sat = valid_hsv[:, 2]
+Y_obs_val = valid_hsv[:, 3]
 
+perp_hue = descretized_perplexity(Y_obs_hue, Yp_hue, output_res)
+perp_sat = descretized_perplexity(Y_obs_sat, Yp_sat, output_res)
+perp_val = descretized_perplexity(Y_obs_val, Yp_val, output_res)
+perp = geomean([perp_hue perp_sat perp_val])
+
+Yp_uniform = ones(length(Y_obs_hue), output_res)./length(Y_obs_hue)
+perp_uniform_baseline = descretized_perplexity(Y_obs_hue, Yp_uniform, output_res)
 
 #######################
 # Lets look at the output
 
 const query = querier(sess, batch_size, n_steps; encoding=encoding)
+using Plots
 pyplot()
 
 plot_query(input) = plot_hsv(query(input)...)

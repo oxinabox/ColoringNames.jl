@@ -5,6 +5,7 @@ using Iterators
 using Memoize
 using StaticArrays
 using TensorFlow
+using StatsBase
 
 export morpheme_tokenizer, morpheme_tokenize, demarcate, rpad_to_matrix, @names_from, prepare_data, prepare_labels, hsv2colorant
 
@@ -26,6 +27,7 @@ include("input.jl")
 include("prob.jl")
 include("plot_colors.jl")
 
+include("evaluation.jl")
 
 
 end # module

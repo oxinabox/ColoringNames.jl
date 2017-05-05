@@ -6,3 +6,5 @@
 src/dig_deep\.jl
 
 models/
+
+logs/

@@ -3,9 +3,12 @@ using Base.Test
 using MLDataUtils
 
 tests = [
-    "prob.jl"
+    "prob.jl",
     "input.jl",
     "util.jl",
+    "tf_extra.jl",
+    "evalutation.jl"
+
 ]
 
 for filename in tests
