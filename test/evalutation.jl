@@ -12,3 +12,25 @@ using Base.Test
     @test descretized_perplexity([0.2,0.2, 0.2, 0.2], ones(4, 10)./10) ≈ 10
     @test descretized_perplexity([0.1,0.7, 0.8, 0.1], ones(4, 10)./10) ≈ 10
 end
+
+@testset "bin expected value" begin
+    @test bin_expected_value([1,2,3,4], 4) == [1/8, 3/8, 5/8, 7/8 ]
+    @test bin_expected_value([1,2,3], 3) == [1/6, 1/2, 5/6 ]
+end
+
+@testset "Mean Square Error Peak" begin
+
+    @test peak([0.5, 2.5, 0.3]) == 1/2
+    @test peak([0.5 0.2 0.3; 0.1 0.1 0.8]) ≈ [1/6, 5/6]
+
+
+    three127 = [0.1 0.2 0.7; 0.1 0.2 0.7; 0.1 0.2 0.7]
+    @test peak(three127) == [1, 1, 1]
+    three181 = [0.1 0.8 0.1; 0.1 0.8 0.7; 0.1 0.2 0.1]
+    @test peak(three181) == [0.5, 0.5, 0.5]
+
+    @test mse_from_peak([3, 3, 3]/3, three127) ≈  mean(sum([0.5/3, 0.5/3, 0.5/3].^2))
+    @test mse_from_peak([3, 2, 3]/3, three127) ≈  mean(sum([0.5/3, 0.5/3, 0.5/3].^2))
+    @test mse_from_peak([3, 1.5, 3]/3, three127) ≈  mean(sum([0.5/3, 1.0/3, 0.5/3].^2))
+    @test mse_from_peak([3, 1.0, 3]/3, three127) ≈  mean(sum([0.5/3, 1.5/3, 0.5/3].^2))
+end
