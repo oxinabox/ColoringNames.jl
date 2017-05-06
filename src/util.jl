@@ -1,3 +1,5 @@
+export stringify_keys
+
 function Base.rpad{T}(xs::Vector{T}, n::Integer, p::T=zero(T))
     sizehint!(xs, n)
     while length(xs)<n
@@ -44,7 +46,7 @@ function names_candidates(blk::Expr) :: Vector{Symbol}
 end
 
 """
-Captures the names in this scope into a dictionary, which it returns
+Captures the names and values in this scope into a dictionary, which it returns
 usage:
 ```julia
 localnames = @names_from begin
@@ -65,3 +67,5 @@ macro names_from(blk::Expr)
         end
     end
 end
+
+stringify_keys(xx::Dict) = Dict(string(kk)=>vv for (kk, vv) in xx)

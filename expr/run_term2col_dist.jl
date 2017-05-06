@@ -22,41 +22,45 @@ const train_raw = get_file(fh->readdlm(fh,'\t'), serv, "color", "monroe/train.cs
 const train_hsv, train_terms_padded, encoding = prepare_data(train_raw, encoding; do_demacate=false)
 const train_text = train_raw[:, 1]
 
-
-save_path = joinpath(Pkg.dir("ColoringNames"), "models", "1.jld")
-log_path = joinpath(Pkg.dir("ColoringNames"), "logs")
 include("term2col_dist.jl")
 
-batch_size = size(valid_terms_padded,2)
-output_res = 64
-n_steps=size(valid_terms_padded,1)
-n_classes = nlabel(encoding)+1
 
+
+run_data = @names_from begin
+    save_path = joinpath(Pkg.dir("ColoringNames"), "models", "1.jld")
+    log_path = joinpath(Pkg.dir("ColoringNames"), "logs")
+
+    batch_size = size(valid_terms_padded,2)
+    output_res = 64
+    n_steps=size(valid_terms_padded,1)
+    n_classes = nlabel(encoding)+1
+    hidden_layer_size = 256
+    embedding_dim = 32
+    learning_rate = 0.5
+end
 
 ## Train
 sess, optimizer = terms_to_color_dist_network(n_classes, n_steps;
                                             output_res= output_res,
                                             batch_size = batch_size,
-                                            embedding_dim = 32,
-                                            hidden_layer_size = 256,
-                                            learning_rate = 0.5)
+                                            embedding_dim = embedding_dim,
+                                            hidden_layer_size = hidden_layer_size,
+                                            learning_rate = learning_rate)
+
 costs_o = train_to_color_dist!(sess, optimizer, batch_size, output_res, train_terms_padded, train_hsv; epochs=200)
 
 
-using Plots
-gr()
-plot(1:length(costs_o), costs_o)
 
 #### Save It
 train.save(train.Saver(), sess, save_path)
 
 #### Load it
 sess, _ = terms_to_color_dist_network(n_classes, n_steps;
-                                            output_res= output_res,
-                                            batch_size = batch_size,
-                                            embedding_dim = 32,
-                                            hidden_layer_size = 256,
-                                            learning_rate = 0.5)
+                                        output_res= output_res,
+                                        batch_size = batch_size,
+                                        embedding_dim = embedding_dim,
+                                        hidden_layer_size = hidden_layer_size,
+                                        learning_rate = learning_rate)
 
 train.restore(train.Saver(), sess, save_path)
 
@@ -74,13 +78,19 @@ Y_obs_hue = valid_hsv[:, 1]
 Y_obs_sat = valid_hsv[:, 2]
 Y_obs_val = valid_hsv[:, 3]
 
-perp_hue = descretized_perplexity(Y_obs_hue, Yp_hue, output_res)
-perp_sat = descretized_perplexity(Y_obs_sat, Yp_sat, output_res)
-perp_val = descretized_perplexity(Y_obs_val, Yp_val, output_res)
+perp_hue = descretized_perplexity(Y_obs_hue, Yp_hue)
+perp_sat = descretized_perplexity(Y_obs_sat, Yp_sat)
+perp_val = descretized_perplexity(Y_obs_val, Yp_val)
 perp = geomean([perp_hue perp_sat perp_val])
 
 Yp_uniform = ones(length(Y_obs_hue), output_res)./length(Y_obs_hue)
-perp_uniform_baseline = descretized_perplexity(Y_obs_hue, Yp_uniform, output_res)
+perp_uniform_baseline = descretized_perplexity(Y_obs_hue, Yp_uniform)
+
+
+####
+# calcute MSE from the peak
+
+mse_from_peak(valid_hsv, (Yp_hue, Yp_sat, Yp_val))
 
 #######################
 # Lets look at the output
