@@ -1,6 +1,6 @@
 using Plots
 export plot_colors, plot_hsv
-pyplot() # Can't trust GR not to mess up colors
+#pyplot() # Can't trust GR not to mess up colors
 
 """
 EG:
@@ -36,13 +36,6 @@ function plot_colors(column_colors...; column_names=[], row_names=[])
     )
 end
 
-plot_colors([:red, :green, :blue], [:black, :white, colorant"black"];
-            row_names=["a", "b", "c"],
-            column_names=["X","Y"])
-
-plot_colors([:red, :green, :blue], [:black, :white, colorant"black"];
-            row_names=["a", "b", "c"],
-            column_names=["X","Y"])
 
 "Plots a histograms of HSV"
 function plot_hsv(hp::Vector, sp::Vector, vp::Vector)

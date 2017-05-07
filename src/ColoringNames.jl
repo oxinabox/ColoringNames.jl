@@ -1,6 +1,6 @@
 module ColoringNames
 using MLLabelUtils
-using MLDataUtils
+using MLDataPattern
 using Iterators
 using Memoize
 using StaticArrays

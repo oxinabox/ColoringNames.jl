@@ -1,6 +1,6 @@
 using SwiftObjectStores
 using ColoringNames
-using MLDataUtils
+using MLDataPattern
 using MLLabelUtils
 using StaticArrays
 using Juno
@@ -9,10 +9,11 @@ using TensorFlow
 using JLD
 
 
-const od =(MLDataUtils.ObsDim.First(), MLDataUtils.ObsDim.Last())
+const od =(ObsDim.First(), ObsDim.Last())
 
 const serv=SwiftService()
 
+println("loading data")
 const valid_raw = get_file(fh->readdlm(fh,'\t'), serv, "color", "monroe/dev.csv")
 const valid_hsv, valid_terms_padded, encoding = prepare_data(valid_raw; do_demacate=false)
 const valid_text = valid_raw[:, 1]
@@ -28,12 +29,14 @@ const train_text = train_raw[:, 1]
 
 const g_output_res = 64
 const g_splay_stddev=1/g_output_res
+
+println("splaying probabilities")
 const train_hsvps = splay_probabilities(train_hsv, g_output_res, g_splay_stddev)
 
 
 function main(embedding_dim, hidden_layer_size)
     runname = joinpath("hyperparam_validation","emb$(embedding_dim)_hl$(hidden_layer_size)_or$(g_output_res)")
-
+    println("begin $runname")
     datadir = joinpath(Pkg.dir("ColoringNames"), "models", "$runname")
     mkdir(datadir)
 
@@ -60,7 +63,7 @@ function main(embedding_dim, hidden_layer_size)
         splay_stddev=g_splay_stddev
     end
 
-
+    println("initialising $runname network")
     sess, optimizer = ColoringNames.terms_to_color_dist_network(
                                                 n_classes,
                                                 n_steps;
@@ -71,7 +74,7 @@ function main(embedding_dim, hidden_layer_size)
                                                 learning_rate = learning_rate)
 
 
-
+    println("training $runname network")
     run_data[:training_costs_o] = ColoringNames.train_to_color_dist!(
                                                     sess,
                                                     optimizer,
@@ -83,16 +86,22 @@ function main(embedding_dim, hidden_layer_size)
                                                     epochs=epochs
                                                     )
 
-    train.save(train.Saver(), sess, model_path)
 
+    println("evaluating $runname")
     run_data[:results] = ColoringNames.evaluate(sess, valid_terms_padded, valid_hsv)
 
+    println("saving $runname")
+    train.save(train.Saver(), sess, model_path)
     save(meta_path, stringify_keys(run_data))
 end
 
 for emb in [3, 16, 32, 64], hl in [32, 64, 128, 256]
     gc()
-    main(emb, hl)
+    try
+        main(emb, hl)
+    catch ex
+        warn(ex)
+    end
 end
 
 
