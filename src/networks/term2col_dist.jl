@@ -46,7 +46,7 @@ function terms_to_color_dist_network(n_term_classes, n_steps;
             loss = nn.softmax_cross_entropy_with_logits(;labels=Yp_obs, logits=Y_logit, name="loss_$name")
 
             Summaries.scalar("loss_$name", reduce_mean(loss); name="summary_loss_$name")
-            Summaries.histogram("W_$name", W; name="summary_W_$name")
+#            Summaries.histogram("W_$name", W; name="summary_W_$name")
             loss
         end
         loss_hue = declare_output_layer("hue")
@@ -59,7 +59,7 @@ function terms_to_color_dist_network(n_term_classes, n_steps;
 
         # Generate some summary operations
         summary_cost = Summaries.scalar("cost", cost)
-        summary_W1 = Summaries.histogram("W1", W1)
+#        summary_W1 = Summaries.histogram("W1", W1)
 
     end
     run(sess, global_variables_initializer())
