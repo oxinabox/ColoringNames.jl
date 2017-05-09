@@ -36,6 +36,7 @@ const train_hsvps = splay_probabilities(train_hsv, g_output_res, g_splay_stddev)
 
 function main(embedding_dim, hidden_layer_size)
     runname = joinpath("hyperparam_validation","emb$(embedding_dim)_hl$(hidden_layer_size)_or$(g_output_res)")
+#    runname = joinpath("checkruns_$(embedding_dim)_hl$(hidden_layer_size)_or$(g_output_res)")
     println("begin $runname")
     datadir = joinpath(Pkg.dir("ColoringNames"), "models", "$runname")
     mkdir(datadir)
@@ -50,7 +51,7 @@ function main(embedding_dim, hidden_layer_size)
         log_path = joinpath(datadir, "logs")
         mkdir(log_path)
 
-        batch_size = size(valid_terms_padded,2)
+        batch_size = 12_381 #Factors of the true test set size are: 2 * 2 * 3 * 11 * 4_127 = 5_44_764
         output_res = g_output_res
         n_steps=size(valid_terms_padded,1)
         n_classes = nlabel(encoding)+1
@@ -64,7 +65,7 @@ function main(embedding_dim, hidden_layer_size)
     end
 
     println("initialising $runname network")
-    sess, optimizer = ColoringNames.terms_to_color_dist_network(
+    sess, optimizer = terms_to_color_dist_network(
                                                 n_classes,
                                                 n_steps;
                                                 output_res = output_res,
@@ -75,7 +76,7 @@ function main(embedding_dim, hidden_layer_size)
 
 
     println("training $runname network")
-    run_data[:training_costs_o] = ColoringNames.train_to_color_dist!(
+    run_data[:training_costs_o] = train_to_color_dist!(
                                                     sess,
                                                     optimizer,
                                                     batch_size,
@@ -86,9 +87,8 @@ function main(embedding_dim, hidden_layer_size)
                                                     epochs=epochs
                                                     )
 
-
     println("evaluating $runname")
-    run_data[:results] = ColoringNames.evaluate(sess, valid_terms_padded, valid_hsv)
+    run_data[:results] = evaluate(sess, batch_size, valid_terms_padded, valid_hsv)
 
     println("saving $runname")
     train.save(train.Saver(), sess, model_path)

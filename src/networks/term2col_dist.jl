@@ -91,7 +91,7 @@ function train_to_color_dist!(sess, optimizer, batch_size, output_res, train_ter
     ss = sess.graph
     if log_dir!=nothing
         summary_op = Summaries.merge_all() #XXX: Does this break if the default graph has changed?
-        summary_writer = train.SummaryWriter(log_dir)
+        summary_writer = Summaries.FileWriter(log_dir; graph=ss)
     else
         warn("No log_dir set during training; no logs will be kept.")
     end
@@ -172,13 +172,36 @@ end
 
 
 "Run all evalutations, returning a dictionary of results"
-function evaluate(sess, test_terms_padded, test_hsv)
-    Y_obs_hue = test_hsv[:, 1]
-    Y_obs_sat = test_hsv[:, 2]
-    Y_obs_val = test_hsv[:, 3]
-
+function evaluate(sess, batch_size, test_terms_padded, test_hsv)
+    #GOLDPLATE: do this without just storing up results, particularly without doing it via row appends
+    
     gg=sess.graph
-    Yp_hue, Yp_sat, Yp_val = run(sess, [gg["Yp_hue"], gg["Yp_sat"], gg["Yp_val"]],  Dict(gg["terms"]=>test_terms_padded, gg["keep_prob"]=>1.0))
+    output_res = get_shape(gg["Yp_obs_hue"], 1) #HACK
+
+    Y_obs_hue = Vector{Float32}(); sizehint!(Y_obs_hue, size(test_hsv, 1))
+    Y_obs_sat = Vector{Float32}(); sizehint!(Y_obs_sat, size(test_hsv, 1))
+    Y_obs_val = Vector{Float32}(); sizehint!(Y_obs_val, size(test_hsv, 1))
+    Yp_hue = Matrix{Float32}(0, output_res)
+    Yp_sat = Matrix{Float32}(0, output_res)
+    Yp_val = Matrix{Float32}(0, output_res)
+    
+
+    data = shuffleobs((test_hsv[:, 1], test_hsv[:,2], test_hsv[:,1], test_terms_padded))
+    # Shuffle because during validation items that don't fit in batches will be dropped
+    # Don't do this at test time; but it is fine when using the validation data to estimate
+    batchs = eachbatch(data; size=batch_size)
+
+    @progress "Batches" for (Y_obs_hue_b, Y_obs_sat_b, Y_obs_val_b, terms) in batchs
+        Yp_hue_b, Yp_sat_b, Yp_val_b = run(sess, [gg["Yp_hue"], gg["Yp_sat"], gg["Yp_val"]],  Dict(gg["terms"]=>terms, gg["keep_prob"]=>1.0))
+
+        append!(Y_obs_hue, Y_obs_hue_b)
+        append!(Y_obs_sat, Y_obs_sat_b)
+        append!(Y_obs_val, Y_obs_val_b)
+        Yp_hue = [Yp_hue; Yp_hue_b]
+        Yp_sat = [Yp_sat; Yp_sat_b]
+        Yp_val = [Yp_val; Yp_val_b]
+    end
+
     Yp_uniform = ones(Yp_hue)./length(Y_obs_hue)
 
     @names_from begin
@@ -189,6 +212,6 @@ function evaluate(sess, test_terms_padded, test_hsv)
 
         perp_uniform_baseline = descretized_perplexity(Y_obs_hue, Yp_uniform)
 
-        mse_to_peak = mse_from_peak(test_hsv, (Yp_hue, Yp_sat, Yp_val))
+        mse_to_peak = mse_from_peak([Y_obs_hue Y_obs_sat Y_obs_val], (Yp_hue, Yp_sat, Yp_val))
     end
 end
