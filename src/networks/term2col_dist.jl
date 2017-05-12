@@ -1,14 +1,65 @@
 using TensorFlow
 using StatsBase
 using Juno
+using FileIO
 
 const Summaries = TensorFlow.summary
 
-export terms_to_color_dist_network, train_to_color_dist!, querier, evaluate
+export TermToColorDistributionNetwork, train_to_color_dist!, querier, evaluate
+
+immutable TermToColorDistributionNetwork{NTerms, S<:AbstractString, OPT}
+    encoding::LabelEnc.NativeLabels{S, NTerms}
+    sess::Session
+    optimizer::OPT
+    max_tokens::Int #Max nummber of tokens in a description
+    output_res::Int
+    hidden_layer_size::Int
+    embedding_dim::Int
+    batch_size::Int
+    learning_rate::Float32 #TODO: Work out a way for this not to be a parameter of the network, but of training
+end
+
+function FileIO.save(mdl::TermToColorDistributionNetwork, save_dir; extra_info...)
+    params = Dict(string(nn)=>getfield(mdl,nn) for nn in fieldnames(mdl) if !(nn in ["sess", "optimizer"]))
+    for (kk, vv) in extra_info
+        params[string(kk)] = vv
+    end
+    params["save_time"] = now()
+    params["git_hash"] = strip(readstring(`git rev-parse --verify HEAD`))
+    
+    params["model_path"] = joinpath(save_dir, "model.jld")
+    save(joinpath(save_dir, "params.jld", params))
+    
+    train.save(train.Saver(), sess, params["model_path"])
+end
 
 
-function terms_to_color_dist_network(n_term_classes, n_steps;
-        batch_size = 128,
+function restore(::Type{TermToColorDistributionNetwork}, param_path, model_path=load(param_path,"model_path"))
+    @load(param_path, encoding, max_tokens, batch_size, hidden_layer_size, embedding_dim, output_res, learning_rate)
+    
+    sess, optimizer = init_terms_to_color_dist_network_session(nlabel(encoding), max_tokens, batch_size, hidden_layer_size, embedding_dim, output_res, learning_rate)
+    train.restore(train.Saver(), sess, model_path)
+
+    TermToColorDistributionNetwork(encoding, sess, optimizer,  max_tokens, output_res, hidden_layer_size, embedding_dim, batch_size, learning_rate)
+end
+
+
+function TermToColorDistributionNetwork{NTerms}(encoding::LabelEnc.NativeLabels{String, NTerms};
+                                                max_tokens=4,
+                                                output_res=64,
+                                                hidden_layer_size=128, #* at from search parameter space on dev set at output_res 64
+                                                embedding_dim=16, #* ditto
+                                                batch_size=12_381,
+                                                learning_rate=0.5)
+
+    sess, optimizer = init_terms_to_color_dist_network_session(NTerms, max_tokens, batch_size, hidden_layer_size, embedding_dim, output_res, learning_rate)
+    TermToColorDistributionNetwork(encoding, sess, optimizer,  max_tokens, output_res, hidden_layer_size, embedding_dim, batch_size, learning_rate)
+end
+
+function init_terms_to_color_dist_network_session(
+        n_term_classes,
+        n_steps,
+        batch_size,
         hidden_layer_size = 512,
         embedding_dim = 16,
         output_res = 256,
@@ -68,27 +119,22 @@ end
 
 
 
-function train_to_color_dist!(sess, optimizer, batch_size, output_res, train_terms_padded, train_hsv::AbstractMatrix,
+function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_hsv::AbstractMatrix,
                             log_dir=nothing;
-                            epochs=3, dropout_keep_prob=0.5f0, splay_stddev=1/output_res)
+                            epochs=3, dropout_keep_prob=0.5f0, splay_stddev=1/mdl.output_res)
 
-    train_hsvps = splay_probabilities(train_hsv, output_res, splay_stddev)
-    train_to_color_dist!(sess, optimizer, batch_size, output_res, train_terms_padded, train_hsvps, log_dir;
+    train_hsvps = splay_probabilities(train_hsv, mdl.output_res, splay_stddev)
+    train_to_color_dist!(mdl, train_terms_padded, train_hsvps, log_dir;
                         epochs=epochs, dropout_keep_prob=dropout_keep_prob)
 
 end
 
 
-
-# Create a summary writer
-
-
-
-
-function train_to_color_dist!(sess, optimizer, batch_size, output_res, train_terms_padded, train_hsvps::NTuple{3},
+function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_hsvps::NTuple{3},
                                 log_dir=nothing;
-                                epochs=3, dropout_keep_prob=0.5f0)
-    ss = sess.graph
+                                epochs=30, #From checking convergance at default parameters for network
+                                dropout_keep_prob=0.5f0)
+    ss = mdl.sess.graph
     if log_dir!=nothing
         summary_op = Summaries.merge_all() #XXX: Does this break if the default graph has changed?
         summary_writer = Summaries.FileWriter(log_dir; graph=ss)
@@ -101,15 +147,15 @@ function train_to_color_dist!(sess, optimizer, batch_size, output_res, train_ter
     @progress "Epochs" for epoch_ii in 1:epochs
 
         data = shuffleobs((train_hsvps..., train_terms_padded))
-        batchs = eachbatch(data; size=batch_size)
+        batchs = eachbatch(data; size=mdl.batch_size)
 
         @progress "Batches" for (hp_obs, sp_obs, vp_obs, terms) in batchs
 
             cost_o, optimizer_o = run(
-                sess,
+                mdl.sess,
                 [
                     ss["cost"],
-                    optimizer
+                    mdl.optimizer
                 ],
                 Dict(
                     ss["keep_prob"]=>dropout_keep_prob,
@@ -126,7 +172,7 @@ function train_to_color_dist!(sess, optimizer, batch_size, output_res, train_ter
         #Log summary
         if log_dir!=nothing
             (hp_obs, sp_obs, vp_obs, terms) = first(batchs) #use the first batch to eval on, the one we trained least recently.  they are shuffled every epoch anyway
-            summaries = run(sess, summary_op,
+            summaries = run(mdl.sess, summary_op,
                     Dict(
                         ss["keep_prob"]=>1.0,
                         ss["terms"]=>terms,
@@ -143,53 +189,50 @@ function train_to_color_dist!(sess, optimizer, batch_size, output_res, train_ter
 end
 
 
-function querier(sess, batch_size, n_steps; encoding=encoding)
-    function query(input_text)
-        label = SubString(input_text, 1) #HACK to get String->SubString
-        labels, _ = ColoringNames.prepare_labels([label], encoding, do_demacate=false)
+function query(mdl::TermToColorDistributionNetwork,  input_text)
+    label = input_text
+    labels, _ = prepare_labels([label], mdl.encoding, do_demacate=false)
 
-        nsteps_to_pad = n_steps - size(labels,1)
-        nbatch_items_to_pad = batch_size - size(labels,2)
+    nsteps_to_pad = mdl.max_tokens - size(labels,1)
+    nbatch_items_to_pad = mdl.batch_size - size(labels,2)
 
-        padded_labels = [[labels; zeros(Int, nsteps_to_pad)] zeros(Int, (n_steps, nbatch_items_to_pad))]
-        ss=sess.graph
-        hp, sp, vp = run(
-            sess,
-            [
-                ss["Yp_hue"],
-                ss["Yp_sat"],
-                ss["Yp_val"]
-            ],
-            Dict(
-                ss["keep_prob"]=>1.0f0,
-                ss["terms"]=>padded_labels,
-            )
+    padded_labels = [[labels; zeros(Int, nsteps_to_pad)] zeros(Int, (mdl.max_tokens, nbatch_items_to_pad))]
+    ss=mdl.sess.graph
+    hp, sp, vp = run(
+        mdl.sess,
+        [
+            ss["Yp_hue"],
+            ss["Yp_sat"],
+            ss["Yp_val"]
+        ],
+        Dict(
+            ss["keep_prob"]=>1.0f0,
+            ss["terms"]=>padded_labels,
         )
+    )
 
-        hp[1,:], sp[1,:], vp[1,:]
-    end
+    hp[1,:], sp[1,:], vp[1,:]
 end
 
 
 "Run all evalutations, returning a dictionary of results"
-function evaluate(sess, batch_size, test_terms_padded, test_hsv)
+function evaluate(mdl::TermToColorDistributionNetwork, test_terms_padded, test_hsv)
     #GOLDPLATE: do this without just storing up results, particularly without doing it via row appends
     
     gg=sess.graph
-    output_res = get_shape(gg["Yp_obs_hue"], 1) #HACK
 
     Y_obs_hue = Vector{Float32}(); sizehint!(Y_obs_hue, size(test_hsv, 1))
     Y_obs_sat = Vector{Float32}(); sizehint!(Y_obs_sat, size(test_hsv, 1))
     Y_obs_val = Vector{Float32}(); sizehint!(Y_obs_val, size(test_hsv, 1))
-    Yp_hue = Matrix{Float32}(0, output_res)
-    Yp_sat = Matrix{Float32}(0, output_res)
-    Yp_val = Matrix{Float32}(0, output_res)
+    Yp_hue = Matrix{Float32}(0, mdl.output_res)
+    Yp_sat = Matrix{Float32}(0, mdl.output_res)
+    Yp_val = Matrix{Float32}(0, mdl.output_res)
     
 
     data = shuffleobs((test_hsv[:, 1], test_hsv[:,2], test_hsv[:,3], test_terms_padded))
     # Shuffle because during validation items that don't fit in batches will be dropped
     # Don't do this at test time; but it is fine when using the validation data to estimate
-    batchs = eachbatch(data; size=batch_size)
+    batchs = eachbatch(data; size=mdl.batch_size)
 
     @progress "Batches" for (Y_obs_hue_b, Y_obs_sat_b, Y_obs_val_b, terms) in batchs
         Yp_hue_b, Yp_sat_b, Yp_val_b = run(sess, [gg["Yp_hue"], gg["Yp_sat"], gg["Yp_val"]],  Dict(gg["terms"]=>terms, gg["keep_prob"]=>1.0))
