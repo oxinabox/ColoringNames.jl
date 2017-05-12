@@ -68,4 +68,6 @@ macro names_from(blk::Expr)
     end
 end
 
+"Returns a new dictionary, with the same key value pairs as the input, but with the keys converted to strings"
 stringify_keys(xx::Dict) = Dict(string(kk)=>vv for (kk, vv) in xx)
+

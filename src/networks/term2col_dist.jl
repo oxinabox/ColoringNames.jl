@@ -186,7 +186,7 @@ function evaluate(sess, batch_size, test_terms_padded, test_hsv)
     Yp_val = Matrix{Float32}(0, output_res)
     
 
-    data = shuffleobs((test_hsv[:, 1], test_hsv[:,2], test_hsv[:,1], test_terms_padded))
+    data = shuffleobs((test_hsv[:, 1], test_hsv[:,2], test_hsv[:,3], test_terms_padded))
     # Shuffle because during validation items that don't fit in batches will be dropped
     # Don't do this at test time; but it is fine when using the validation data to estimate
     batchs = eachbatch(data; size=batch_size)
