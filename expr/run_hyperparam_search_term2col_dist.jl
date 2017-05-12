@@ -51,12 +51,12 @@ function main(splay_std_dev_in_bins)
     mdl = TermToColorDistributionNetwork(encoding)
 
     println("training $runname network")
-    run_data[:training_costs_o] = train_to_color_dist!(mdl,
-                                                    train_terms_padded,
-                                                    train_hsvps,
-                                                    log_path;
-                                                    epochs=epochs
-                                                    )
+    run_data[:training_costs_o] = train!(mdl,
+                                        train_terms_padded,
+                                        train_hsvps,
+                                        log_path;
+                                        epochs=epochs
+                                        )
 
     println("evaluating $runname")
     run_data[:validation_set_results] = evaluate(mdl, valid_terms_padded, valid_hsv)

@@ -51,7 +51,7 @@ function TermToColorDistributionNetwork{S<:AbstractString, NTerms}(encoding::Lab
                                                 hidden_layer_size=128, #* at from search parameter space on dev set at output_res 64
                                                 embedding_dim=16, #* ditto
                                                 batch_size=12_381,
-                                                learning_rate=0.5)
+                                                learning_rate=0.5f0)
 
     sess, optimizer = init_terms_to_color_dist_network_session(NTerms, max_tokens, batch_size, hidden_layer_size, embedding_dim, output_res, learning_rate)
     TermToColorDistributionNetwork(encoding, sess, optimizer,  max_tokens, output_res, hidden_layer_size, embedding_dim, batch_size, learning_rate)
