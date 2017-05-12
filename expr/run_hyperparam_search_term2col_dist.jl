@@ -51,7 +51,7 @@ function main(splay_std_dev_in_bins)
     mdl = TermToColorDistributionNetwork(encoding)
 
     println("training $runname network")
-    run_data[:training_costs_o] = train!(mdl,
+    extra_data[:training_costs_o] = train!(mdl,
                                         train_terms_padded,
                                         train_hsv,
                                         log_path;
@@ -60,10 +60,10 @@ function main(splay_std_dev_in_bins)
                                         )
 
     println("evaluating $runname")
-    run_data[:validation_set_results] = evaluate(mdl, valid_terms_padded, valid_hsv)
+    extra_data[:validation_set_results] = evaluate(mdl, valid_terms_padded, valid_hsv)
 
     println("saving $runname")
-    save(meta_path, stringify_keys(run_data))
+    save(mdl, datadir; run_data...)
 end
 
 for spread in [3]

@@ -78,7 +78,7 @@ function init_terms_to_color_dist_network_session(
         terms = placeholder(Int32; shape=[n_steps, batch_size])
         term_lengths = indmin(terms, 1) - 1 #Last index is the one before the first occurance of 0 (the minimum element) Would be faster if could use find per dimentions
 
-        emb_table = get_variable((n_term_classes, embedding_dim), Float32)
+        emb_table = get_variable((n_term_classes+1, embedding_dim), Float32)
         terms_emb = gather(emb_table, terms+1)
 
         cell = nn.rnn_cell.DropoutWrapper(nn.rnn_cell.GRUCell(hidden_layer_size), keep_prob)
@@ -125,7 +125,7 @@ function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_h
                             epochs=3, dropout_keep_prob=0.5f0, splay_stddev=1/mdl.output_res)
 
     train_hsvps = splay_probabilities(train_hsv, mdl.output_res, splay_stddev)
-    train_to_color_dist!(mdl, train_terms_padded, train_hsvps, log_dir;
+    train!(mdl, train_terms_padded, train_hsvps, log_dir;
                         epochs=epochs, dropout_keep_prob=dropout_keep_prob)
 
 end
@@ -220,7 +220,7 @@ end
 function evaluate(mdl::TermToColorDistributionNetwork, test_terms_padded, test_hsv)
     #GOLDPLATE: do this without just storing up results, particularly without doing it via row appends
     
-    gg=sess.graph
+    gg=mdl.sess.graph
 
     Y_obs_hue = Vector{Float32}(); sizehint!(Y_obs_hue, size(test_hsv, 1))
     Y_obs_sat = Vector{Float32}(); sizehint!(Y_obs_sat, size(test_hsv, 1))
@@ -236,7 +236,7 @@ function evaluate(mdl::TermToColorDistributionNetwork, test_terms_padded, test_h
     batchs = eachbatch(data; size=mdl.batch_size)
 
     @progress "Batches" for (Y_obs_hue_b, Y_obs_sat_b, Y_obs_val_b, terms) in batchs
-        Yp_hue_b, Yp_sat_b, Yp_val_b = run(sess, [gg["Yp_hue"], gg["Yp_sat"], gg["Yp_val"]],  Dict(gg["terms"]=>terms, gg["keep_prob"]=>1.0))
+        Yp_hue_b, Yp_sat_b, Yp_val_b = run(mdl.sess, [gg["Yp_hue"], gg["Yp_sat"], gg["Yp_val"]],  Dict(gg["terms"]=>terms, gg["keep_prob"]=>1.0))
 
         append!(Y_obs_hue, Y_obs_hue_b)
         append!(Y_obs_sat, Y_obs_sat_b)
