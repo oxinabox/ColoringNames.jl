@@ -2,6 +2,7 @@ using TensorFlow
 using StatsBase
 using Juno
 using FileIO
+using JLD
 
 const Summaries = TensorFlow.summary
 
@@ -44,7 +45,7 @@ function restore(::Type{TermToColorDistributionNetwork}, param_path, model_path=
 end
 
 
-function TermToColorDistributionNetwork{NTerms}(encoding::LabelEnc.NativeLabels{String, NTerms};
+function TermToColorDistributionNetwork{S<:AbstractString, NTerms}(encoding::LabelEnc.NativeLabels{S, NTerms};
                                                 max_tokens=4,
                                                 output_res=64,
                                                 hidden_layer_size=128, #* at from search parameter space on dev set at output_res 64
