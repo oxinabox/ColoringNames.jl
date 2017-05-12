@@ -53,8 +53,9 @@ function main(splay_std_dev_in_bins)
     println("training $runname network")
     run_data[:training_costs_o] = train!(mdl,
                                         train_terms_padded,
-                                        train_hsvps,
+                                        train_hsv,
                                         log_path;
+                                        splay_stddev=splay_std_dev,
                                         epochs=epochs
                                         )
 

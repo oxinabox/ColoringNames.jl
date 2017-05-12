@@ -6,7 +6,7 @@ using JLD
 
 const Summaries = TensorFlow.summary
 
-export TermToColorDistributionNetwork, train_to_color_dist!, querier, evaluate
+export TermToColorDistributionNetwork, train!, query, evaluate
 
 immutable TermToColorDistributionNetwork{NTerms, S<:AbstractString, OPT}
     encoding::LabelEnc.NativeLabels{S, NTerms}
