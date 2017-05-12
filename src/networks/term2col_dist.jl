@@ -6,7 +6,7 @@ using JLD
 
 const Summaries = TensorFlow.summary
 
-export TermToColorDistributionNetwork, train!, query, evaluate
+export TermToColorDistributionNetwork, train!, query, evaluate, restore
 
 immutable TermToColorDistributionNetwork{NTerms, S<:AbstractString, OPT}
     encoding::LabelEnc.NativeLabels{S, NTerms}
@@ -21,7 +21,7 @@ immutable TermToColorDistributionNetwork{NTerms, S<:AbstractString, OPT}
 end
 
 function FileIO.save(mdl::TermToColorDistributionNetwork, save_dir; extra_info...)
-    params = Dict(string(nn)=>getfield(mdl,nn) for nn in fieldnames(mdl) if !(nn in ["sess", "optimizer"]))
+    params = Dict(string(nn)=>getfield(mdl,nn) for nn in fieldnames(mdl) if !(nn in [:sess, :optimizer]))
     for (kk, vv) in extra_info
         params[string(kk)] = vv
     end
@@ -29,9 +29,9 @@ function FileIO.save(mdl::TermToColorDistributionNetwork, save_dir; extra_info..
     params["git_hash"] = strip(readstring(`git rev-parse --verify HEAD`))
     
     params["model_path"] = joinpath(save_dir, "model.jld")
-    save(joinpath(save_dir, "params.jld", params))
+    save(joinpath(save_dir, "params.jld"), params)
     
-    train.save(train.Saver(), sess, params["model_path"])
+    train.save(train.Saver(), mdl.sess, params["model_path"])
 end
 
 

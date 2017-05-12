@@ -7,7 +7,7 @@ using Juno
 using StatsBase
 using TensorFlow
 using JLD
-
+using FileIO
 
 const od =(ObsDim.First(), ObsDim.Last())
 
@@ -44,7 +44,7 @@ function main(splay_std_dev_in_bins)
 
         splay_std_dev_in_bins=splay_std_dev_in_bins
         splay_std_dev = splay_std_dev_in_bins/g_output_res
-        epochs = 30
+        epochs = 3
     end
 
     println("initialising $runname network")
@@ -63,7 +63,7 @@ function main(splay_std_dev_in_bins)
     extra_data[:validation_set_results] = evaluate(mdl, valid_terms_padded, valid_hsv)
 
     println("saving $runname")
-    save(mdl, datadir; run_data...)
+    save(mdl, datadir; extra_data...)
 end
 
 for spread in [3]
