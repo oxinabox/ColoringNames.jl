@@ -18,14 +18,14 @@ const valid_raw = get_file(fh->readdlm(fh,'\t'), serv, "color", "monroe/dev.csv"
 const valid_hsv, valid_terms_padded, encoding = prepare_data(valid_raw; do_demacate=false)
 const valid_text = valid_raw[:, 1]
 
-#const train_raw = get_file(fh->readdlm(fh,'\t'), serv, "color", "monroe/train.csv")
-#const train_hsv, train_terms_padded, encoding = prepare_data(train_raw, encoding; do_demacate=false)
-#const train_text = train_raw[:, 1]
+const train_raw = get_file(fh->readdlm(fh,'\t'), serv, "color", "monroe/train.csv")
+const train_hsv, train_terms_padded, encoding = prepare_data(train_raw, encoding; do_demacate=false)
+const train_text = train_raw[:, 1]
 
-const train_raw = valid_raw
-const train_hsv = valid_hsv
-const train_text = valid_text
-const train_terms_padded = valid_terms_padded
+#const train_raw = valid_raw
+#const train_hsv = valid_hsv
+#const train_text = valid_text
+#const train_terms_padded = valid_terms_padded
 
 const g_output_res = 64
 
@@ -44,7 +44,7 @@ function main(splay_std_dev_in_bins)
 
         splay_std_dev_in_bins=splay_std_dev_in_bins
         splay_std_dev = splay_std_dev_in_bins/g_output_res
-        epochs = 3
+        epochs = 30
     end
 
     println("initialising $runname network")
@@ -66,13 +66,13 @@ function main(splay_std_dev_in_bins)
     save(mdl, datadir; extra_data...)
 end
 
-for spread in [3]
+for spread in [32, 16, 8, 4, 2, 1, 0.5, 0.25, 0.125, 0.0625, 0.03125]
     gc()
-#    try
+    try
         main(spread)
-#    catch ex
-#        warn(ex)
-#    end
+    catch ex
+        warn(ex)
+    end
 end
 
 
