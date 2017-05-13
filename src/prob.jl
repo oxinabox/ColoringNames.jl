@@ -89,7 +89,7 @@ end
 
 """
 Takes in a matrix of HSVs for colors,
-and encodes it as if each value was the expected value of a Gaussian (for S and V), or VonVises distribution (for H),
+and encodes it as if each value was the expected value of a Gaussian (for S and V), or VonMises distribution (for H),
 and returns a histogram for each.
 """
 function splay_probabilities(hsv, nbins, stddev=1/nbins)

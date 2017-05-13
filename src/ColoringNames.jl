@@ -30,4 +30,5 @@ include("plot_colors.jl")
 include("evaluation.jl")
 
 include("networks/term2col_dist.jl")
+include("networks/term2col_dist_noml.jl")
 end # module
