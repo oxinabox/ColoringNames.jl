@@ -21,7 +21,8 @@ Calculated the perplexity.
 """
 function descretized_perplexity(obs, predicted_class_probs)
     @assert all(0 .<= obs .<= 1) #GOLDPLATE: deal with non-0-1 ranges
-    @assert(length(obs)==size(predicted_class_probs, 1))
+    @show obs
+    @assert(length(obs)==size(predicted_class_probs, 1), "$(size(obs)), $(size(predicted_class_probs))")
     output_res = size(predicted_class_probs, 2)
     bin_obs = find_bin(obs, output_res)
     total = 0.0

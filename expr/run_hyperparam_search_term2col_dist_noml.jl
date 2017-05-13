@@ -20,6 +20,7 @@ const valid_text = valid_raw[:, 1]
 #const train_raw = get_file(fh->readdlm(fh,'\t'), serv, "color", "monroe/train.csv")
 #const train_hsv, train_terms_padded, encoding = prepare_data(train_raw, encoding; do_demacate=false)
 #const train_text = train_raw[:, 1]
+@show size(valid_hsv)
 
 const train_raw = valid_raw
 const train_hsv = valid_hsv
@@ -52,8 +53,9 @@ function main(g_output_res, splay_std_dev_in_bins)
 
     println("saving $runname")
     extra_data[:model]=mdl
-    save(joinpath(datadir, "params_with_model.jld"); stringify_keys(extra_data))
+    save(joinpath(datadir, "params_with_model.jld"), stringify_keys(extra_data))
 end
+
 
 for output_res in [32, 64, 128, 256, 512]
     for spread in [32, 16, 8, 4, 2, 1, 0.5, 0.25, 0.125, 0.0625, 0.03125]
