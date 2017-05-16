@@ -2,6 +2,7 @@
 import Juno: @progress
 using Distributions
 using CatViews
+using Base.Threads
 
 export gaussianhot, gaussianhot!,
     vonmiseshot, vonmiseshot!,
@@ -107,7 +108,7 @@ places results into hp, sp, vp for probabilities of hue, saturation and value
 """
 function splay_probabilities!(hp,sp,vp, hsv; stddev=1/size(hp,1))
     @assert(size(hp) == size(sp) == size(vp))
-    @progress "splaying probabilities" for (ii, obs) in enumerate(eachobs(hsv, ObsDim.First()))
+    @threads for ii in 1:size(hp,2)
         gaussianwraparoundhot!(@view(hp[:,ii]), hsv[ii, 1], stddev)
         gaussianhot!(@view(sp[:,ii]), hsv[ii, 2], stddev)
         gaussianhot!(@view(vp[:,ii]), hsv[ii, 3], stddev)

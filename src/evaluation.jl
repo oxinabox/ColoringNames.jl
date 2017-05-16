@@ -1,4 +1,4 @@
-export descretized_perplexity, find_bin, mse_from_peak, peak, bin_expected_value
+export descretized_perplexity, find_bin, mse_from_peak, peak, bin_expected_value, total_descretized_logprob
 
 "Determine which bin a continous value belongs in"
 function find_bin(value, nbins, range_min=0.0, range_max=1.0)
@@ -20,8 +20,12 @@ For `predicted_class_probs` the predictions of probability for each bin.
 Calculated the perplexity.
 """
 function descretized_perplexity(obs, predicted_class_probs)
+    total_lp = total_descretized_logprob(obs, predicted_class_probs)
+    exp2(-total_lp/length(obs))
+end
+
+function total_descretized_logprob(obs, predicted_class_probs)
     @assert all(0 .<= obs .<= 1) #GOLDPLATE: deal with non-0-1 ranges
-    @show obs
     @assert(length(obs)==size(predicted_class_probs, 1), "$(size(obs)), $(size(predicted_class_probs))")
     output_res = size(predicted_class_probs, 2)
     bin_obs = find_bin(obs, output_res)
@@ -29,7 +33,7 @@ function descretized_perplexity(obs, predicted_class_probs)
     for (row, bin) in enumerate(bin_obs)
         total+=log2(predicted_class_probs[row, bin])
     end
-    exp2(-total/length(obs))
+    total
 end
 
 
