@@ -3,7 +3,7 @@ using Juno
 
 const Summaries = TensorFlow.summary
 
-export TermToColorDistributionEmpirical
+export TermToColorDistributionEmpirical, laplace_smooth
 
 immutable TermToColorDistributionEmpirical{N}
     output_res::Int
@@ -31,7 +31,7 @@ function train!{N}(mdl::TermToColorDistributionEmpirical{N}, train_terms, train_
 
         for (dist, train_ps) in zip(dists, train_ps_s)
             for ii in inds
-                dist .+= train_ps[ii, :]
+                dist .+= train_ps[:, ii]
             end
             dist ./= length(inds)
         end
@@ -66,4 +66,17 @@ function evaluate{N}(mdl::TermToColorDistributionEmpirical{N}, test_terms, test_
 
         mse_to_peak = mse_from_peak(test_hsv, tuple(Yps...))
     end
+end
+
+
+function laplace_smooth{N}(mdl::TermToColorDistributionEmpirical{N}, train_text)
+    lblfreqs = Dict(lbl=>length(inds) for (lbl, inds) in labelmap(train_text))
+    
+    function smooth(ps, lbl)
+        counts = ps*lblfreqs[lbl]
+        (counts.+1)./(sum(counts.+1))
+    end
+    term2dist= Dict(lbl=>tuple((smooth(ps, lbl) for ps in pss)...) for (lbl, pss) in mdl.term2dist)
+    
+    TermToColorDistributionEmpirical(mdl.output_res, term2dist)
 end
