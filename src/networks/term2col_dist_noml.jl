@@ -31,7 +31,7 @@ function train!{N}(mdl::TermToColorDistributionEmpirical{N}, train_terms, train_
 
         for (dist, train_ps) in zip(dists, train_ps_s)
             for ii in inds
-                dist .+= train_ps[ii]
+                dist .+= train_ps[ii, :]
             end
             dist ./= length(inds)
         end
@@ -47,11 +47,11 @@ end
 
 "Run all evalutations, returning a dictionary of results"
 function evaluate{N}(mdl::TermToColorDistributionEmpirical{N}, test_terms, test_hsv)
-    Yps = [Matrix{Float32}(0, mdl.output_res) for ii in 1:N]
+    Yps = [Matrix{Float32}(length(test_terms), mdl.output_res) for ii in 1:N]
     
-    for term in test_terms
-        for (ii, ps) in enumerate(query(mdl, term))
-            Yps[ii] = [Yps[ii]; ps']
+    for (term_ii, term) in enumerate(test_terms)
+        for (dist_ii, ps) in enumerate(query(mdl, term))
+            Yps[dist_ii][term_ii, :] = ps'
         end
     end
 
