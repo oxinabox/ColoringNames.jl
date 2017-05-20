@@ -10,7 +10,7 @@ immutable TermToColorDistributionEmpirical{N}
     term2dist::Dict{String, NTuple{N, Vector{Float32}}}
 end
 
-function TermToColorDistributionEmpirical(output_res)
+function TermToColorDistributionEmpirical(output_res=64)
     term2dist=Dict{String, NTuple{3, Vector{Float32}}}()
     TermToColorDistributionEmpirical(output_res, term2dist)
 end

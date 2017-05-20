@@ -9,28 +9,12 @@ using TensorFlow
 using JLD
 using FileIO
 
-const od =(ObsDim.First(), ObsDim.Last())
+ColoringNames.@load_monroe_data()
 
-const serv=SwiftService()
-
-println("loading data")
-const valid_raw = get_file(fh->readdlm(fh,'\t'), serv, "color", "monroe/dev.csv")
-const valid_hsv, valid_terms_padded, encoding = prepare_data(valid_raw; do_demacate=false)
-const valid_text = valid_raw[:, 1]
-
-const train_raw = get_file(fh->readdlm(fh,'\t'), serv, "color", "monroe/train.csv")
-const train_hsv, train_terms_padded, encoding = prepare_data(train_raw, encoding; do_demacate=false)
-const train_text = train_raw[:, 1]
-
-#const train_raw = valid_raw
-#const train_hsv = valid_hsv
-#const train_text = valid_text
-#const train_terms_padded = valid_terms_padded
-
-const g_output_res = 64
+const g_output_res = 256
 
 function main(splay_std_dev_in_bins)
-    runname = joinpath("spread_validation","sib$(splay_std_dev_in_bins)")
+    runname = joinpath("wide_or_hyperparam_validation","sib$(splay_std_dev_in_bins)")
     println("begin $runname")
     datadir = joinpath(Pkg.dir("ColoringNames"), "models", "$runname")
     mkdir(datadir)
