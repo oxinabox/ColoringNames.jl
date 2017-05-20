@@ -2,13 +2,17 @@ using ColoringNames
 using Base.Test
 using MLDataUtils
 
+
+
 tests = [
     "prob.jl",
     "input.jl",
     "util.jl",
     "tf_extra.jl",
-    "evalutation.jl"
-
+    "evalutation.jl",
+    
+    #Long Run Tests Tests
+    "term2col.jl"
 ]
 
 for filename in tests
