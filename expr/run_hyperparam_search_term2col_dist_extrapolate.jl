@@ -9,8 +9,9 @@ using TensorFlow
 using JLD
 using FileIO
 
-const cldata = load_monroe_data(dev_as_test=true)
-
+const full_cldata = load_monroe_data(dev_as_test=true)
+const eval_texts = rare_descriptions(full_cldata.train.text, 100, 8)
+const cldata = extrapolation_dataset(full_cldata, eval_texts)
 
 const g_output_res = 64
 
@@ -26,6 +27,8 @@ function main(splay_std_dev_in_bins)
         executing_file = @__FILE__
         log_path = joinpath(datadir, "logs")
         mkdir(log_path)
+
+        eval_texts = eval_texts
 
         splay_std_dev_in_bins=splay_std_dev_in_bins
         splay_std_dev = splay_std_dev_in_bins/g_output_res
