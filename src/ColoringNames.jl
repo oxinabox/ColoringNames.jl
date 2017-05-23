@@ -24,6 +24,8 @@ include("util.jl")
 include("tf_extra.jl")
 
 include("input.jl")
+include("load_data.jl")
+
 include("prob.jl")
 include("plot_colors.jl")
 
