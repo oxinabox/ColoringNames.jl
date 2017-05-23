@@ -24,12 +24,12 @@ end
     @test peak([0.5 0.2 0.3; 0.1 0.1 0.8]) ≈ [1/6, 5/6]
 
 
-    three127 = [0.1 0.2 0.7; 0.1 0.2 0.7; 0.1 0.2 0.7]
-    @test peak(three127) == [1, 1, 1]
     three181 = [0.1 0.8 0.1; 0.1 0.8 0.7; 0.1 0.2 0.1]
-    @test peak(three181) == [0.5, 0.5, 0.5]
+    @test peak(three181) == reshape([0.5; 0.5; 0.5], (3,1))
+    three127 = [0.1 0.2 0.7; 0.1 0.2 0.7; 0.1 0.2 0.7]
+    @test peak(three127) == reshape([5/6; 5/6; 5/6], (3,1))
 
-    @test mse_from_peak([3, 3, 3]/3, three127) ≈  mean(sum([0.5/3, 0.5/3, 0.5/3].^2))
+    @test mse_from_peak([3, 3, 3]/3, three127) ≈  mean(sum([0.5/3; 0.5/3; 0.5/3].^2))
     @test mse_from_peak([3, 2, 3]/3, three127) ≈  mean(sum([0.5/3, 0.5/3, 0.5/3].^2))
     @test mse_from_peak([3, 1.5, 3]/3, three127) ≈  mean(sum([0.5/3, 1.0/3, 0.5/3].^2))
     @test mse_from_peak([3, 1.0, 3]/3, three127) ≈  mean(sum([0.5/3, 1.5/3, 0.5/3].^2))

@@ -53,7 +53,7 @@ peak(predicted_class_probs::AbstractMatrix) = mapslices(peak, predicted_class_pr
 
 "Mean squared error"
 function mse(obs, preds)
-    mean(sumabs2(preds.-obs, 2))
+    mean(sumabs2(preds.-obs, 1))
 end
 
 function mse_from_peak(obs, predicted_class_probs::AbstractMatrix)

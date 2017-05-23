@@ -1,6 +1,5 @@
 using ColoringNames
 using Base.Test
-using MLDataUtils
 
 
 
