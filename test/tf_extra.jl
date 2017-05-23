@@ -9,14 +9,3 @@ using TensorFlow
 end
 
 
-@testset "Trailing dimention matrix product" begin
-    X=rand(5,7,4)
-    Y=rand(4,10);
-    XY = mapslices(X̄->X̄*Y, X,2:3)
-    @assert size(XY) == (5,7,10)
-
-
-    sess = Session(Graph())
-
-    @test XY == run(sess, trailing_matmul(constant(X),constant(Y)))
-end
