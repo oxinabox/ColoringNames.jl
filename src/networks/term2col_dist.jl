@@ -246,15 +246,11 @@ function evaluate(mdl::TermToColorDistributionNetwork, test_terms_padded, test_h
         Yp_val = [Yp_val; Yp_val_b]
     end
 
-    Yp_uniform = ones(Yp_hue)./length(Y_obs_hue)
-
     @names_from begin
         perp_hue = descretized_perplexity(Y_obs_hue, Yp_hue)
         perp_sat = descretized_perplexity(Y_obs_sat, Yp_sat)
         perp_val = descretized_perplexity(Y_obs_val, Yp_val)
         perp = geomean([perp_hue perp_sat perp_val])
-
-        perp_uniform_baseline = descretized_perplexity(Y_obs_hue, Yp_uniform)
 
         mse_to_peak = mse_from_peak([Y_obs_hue Y_obs_sat Y_obs_val], (Yp_hue, Yp_sat, Yp_val))
     end

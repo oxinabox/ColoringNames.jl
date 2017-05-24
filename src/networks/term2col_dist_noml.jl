@@ -55,14 +55,11 @@ function evaluate{N}(mdl::TermToColorDistributionEmpirical{N}, test_terms, test_
         end
     end
 
-    Yp_uniform = ones(Yps[1])./length(test_terms)
     @names_from begin
         perp_hue = descretized_perplexity(test_hsv[:,1], Yps[1])
         perp_sat = descretized_perplexity(test_hsv[:,2], Yps[2])
         perp_val = descretized_perplexity(test_hsv[:,3], Yps[3])
         perp = geomean([perp_hue, perp_sat, perp_val])
-
-        perp_uniform_baseline = descretized_perplexity(test_hsv[:,1], Yp_uniform)
 
         mse_to_peak = mse_from_peak(test_hsv, tuple(Yps...))
     end
