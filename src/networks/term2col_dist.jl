@@ -16,8 +16,6 @@ immutable TermToColorDistributionNetwork{NTerms, S<:AbstractString, OPT}
     output_res::Int
     hidden_layer_size::Int
     embedding_dim::Int
-    batch_size::Int
-    learning_rate::Float32 #TODO: Work out a way for this not to be a parameter of the network, but of training
 end
 
 function FileIO.save(mdl::TermToColorDistributionNetwork, save_dir; extra_info...)
@@ -36,12 +34,12 @@ end
 
 
 function restore(::Type{TermToColorDistributionNetwork}, param_path, model_path=load(param_path,"model_path"))
-    @load(param_path, encoding, max_tokens, batch_size, hidden_layer_size, embedding_dim, output_res, learning_rate)
+    @load(param_path, encoding, max_tokens, hidden_layer_size, embedding_dim, output_res)
     
-    sess, optimizer = init_terms_to_color_dist_network_session(nlabel(encoding), max_tokens, batch_size, hidden_layer_size, embedding_dim, output_res, learning_rate)
+    sess, optimizer = init_terms_to_color_dist_network_session(nlabel(encoding), max_tokens, hidden_layer_size, embedding_dim, output_res)
     train.restore(train.Saver(), sess, model_path)
 
-    TermToColorDistributionNetwork(encoding, sess, optimizer,  max_tokens, output_res, hidden_layer_size, embedding_dim, batch_size, learning_rate)
+    TermToColorDistributionNetwork(encoding, sess, optimizer,  max_tokens, output_res, hidden_layer_size, embedding_dim)
 end
 
 
@@ -49,22 +47,19 @@ function TermToColorDistributionNetwork{S<:AbstractString, NTerms}(encoding::Lab
                                                 max_tokens=4,
                                                 output_res=64,
                                                 hidden_layer_size=128, #* at from search parameter space on dev set at output_res 64
-                                                embedding_dim=16, #* ditto
-                                                batch_size=12_381,
-                                                learning_rate=0.5f0)
+                                                embedding_dim=16 #* ditto
+                                               )
 
-    sess, optimizer = init_terms_to_color_dist_network_session(NTerms, max_tokens, batch_size, hidden_layer_size, embedding_dim, output_res, learning_rate)
-    TermToColorDistributionNetwork(encoding, sess, optimizer,  max_tokens, output_res, hidden_layer_size, embedding_dim, batch_size, learning_rate)
+    sess, optimizer = init_terms_to_color_dist_network_session(NTerms, max_tokens, hidden_layer_size, embedding_dim, output_res)
+    TermToColorDistributionNetwork(encoding, sess, optimizer,  max_tokens, output_res, hidden_layer_size, embedding_dim)
 end
 
 function init_terms_to_color_dist_network_session(
         n_term_classes,
         n_steps,
-        batch_size,
-        hidden_layer_size = 512,
-        embedding_dim = 16,
-        output_res = 256,
-        learning_rate=0.05,
+        hidden_layer_size,
+        embedding_dim,
+        output_res
     )
 
     graph = Graph()
@@ -75,18 +70,18 @@ function init_terms_to_color_dist_network_session(
     @tf begin
         keep_prob = placeholder(Float32; shape=[])
 
-        terms = placeholder(Int32; shape=[n_steps, batch_size])
+        terms = placeholder(Int32; shape=[n_steps, -1])
         term_lengths = indmin(terms, 1) - 1 #Last index is the one before the first occurance of 0 (the minimum element) Would be faster if could use find per dimentions
 
         emb_table = get_variable((n_term_classes+1, embedding_dim), Float32)
         terms_emb = gather(emb_table, terms+1)
-
+        @show terms_emb
         cell = nn.rnn_cell.DropoutWrapper(nn.rnn_cell.GRUCell(hidden_layer_size), keep_prob)
-        Hs, states = nn.rnn(cell, terms_emb, term_lengths; dtype=Float32, time_major=true)
+        H, state = nn.dynamic_rnn(cell, terms_emb, term_lengths; dtype=Float32, time_major=true)
 
         W1 = get_variable((hidden_layer_size, hidden_layer_size), Float32)
         B1 = get_variable((hidden_layer_size), Float32)
-        Z1 = nn.dropout(nn.relu(Hs[end]*W1 + B1), keep_prob)
+        Z1 = nn.dropout(nn.relu(H*W1 + B1), keep_prob)
 
 
         function declare_output_layer(name)
@@ -94,7 +89,7 @@ function init_terms_to_color_dist_network_session(
             B = get_variable("B_$name", (output_res), Float32)
             Y_logit = Z1*W + B
             Y = nn.softmax(Y_logit; name="Yp_$name")
-            Yp_obs = placeholder(Float32; shape=[output_res, batch_size], name="Yp_obs_$name")'
+            Yp_obs = placeholder(Float32; shape=[output_res, -1], name="Yp_obs_$name")'
             loss = nn.softmax_cross_entropy_with_logits(;labels=Yp_obs, logits=Y_logit, name="loss_$name")
 
             Summaries.scalar("loss_$name", reduce_mean(loss); name="summary_loss_$name")
@@ -122,17 +117,21 @@ end
 
 function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_hsv::AbstractMatrix,
                             log_dir=nothing;
-                            epochs=3, dropout_keep_prob=0.5f0, splay_stddev=1/mdl.output_res)
+                            batch_size=12_138,
+                            epochs=30, dropout_keep_prob=0.5f0, splay_stddev=1/mdl.output_res)
 
     train_hsvps = splay_probabilities(train_hsv, mdl.output_res, splay_stddev)
     train!(mdl, train_terms_padded, train_hsvps, log_dir;
-                        epochs=epochs, dropout_keep_prob=dropout_keep_prob)
+        batch_size=batch_size,
+        epochs=epochs,
+        dropout_keep_prob=dropout_keep_prob)
 
 end
 
 
 function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_hsvps::NTuple{3},
                                 log_dir=nothing;
+                                batch_size=12_138,
                                 epochs=30, #From checking convergance at default parameters for network
                                 dropout_keep_prob=0.5f0)
     ss = mdl.sess.graph
@@ -148,7 +147,7 @@ function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_h
     @progress "Epochs" for epoch_ii in 1:epochs
 
         data = shuffleobs((train_hsvps..., train_terms_padded))
-        batchs = eachbatch(data; size=mdl.batch_size)
+        batchs = eachbatch(data; size=batch_size)
 
         @progress "Batches" for (hp_obs, sp_obs, vp_obs, terms) in batchs
 
@@ -195,9 +194,8 @@ function query(mdl::TermToColorDistributionNetwork,  input_text)
     labels, _ = prepare_labels([label], mdl.encoding, do_demacate=false)
 
     nsteps_to_pad = mdl.max_tokens - size(labels,1)
-    nbatch_items_to_pad = mdl.batch_size - size(labels,2)
 
-    padded_labels = [[labels; zeros(Int, nsteps_to_pad)] zeros(Int, (mdl.max_tokens, nbatch_items_to_pad))]
+    padded_labels = [labels; zeros(Int, nsteps_to_pad)]
     ss=mdl.sess.graph
     hp, sp, vp = run(
         mdl.sess,
@@ -218,33 +216,12 @@ end
 
 "Run all evalutations, returning a dictionary of results"
 function evaluate(mdl::TermToColorDistributionNetwork, test_terms_padded, test_hsv)
-    #GOLDPLATE: do this without just storing up results, particularly without doing it via row appends
-    
     gg=mdl.sess.graph
-
-    Y_obs_hue = Vector{Float32}(); sizehint!(Y_obs_hue, size(test_hsv, 1))
-    Y_obs_sat = Vector{Float32}(); sizehint!(Y_obs_sat, size(test_hsv, 1))
-    Y_obs_val = Vector{Float32}(); sizehint!(Y_obs_val, size(test_hsv, 1))
-    Yp_hue = Matrix{Float32}(0, mdl.output_res)
-    Yp_sat = Matrix{Float32}(0, mdl.output_res)
-    Yp_val = Matrix{Float32}(0, mdl.output_res)
     
+    data = obsview((test_hsv[:, 1], test_hsv[:,2], test_hsv[:,3], test_terms_padded))
+    Y_obs_hue, Y_obs_sat, Y_obs_val, terms = data
 
-    data = shuffleobs((test_hsv[:, 1], test_hsv[:,2], test_hsv[:,3], test_terms_padded))
-    # Shuffle because during validation items that don't fit in batches will be dropped
-    # Don't do this at test time; but it is fine when using the validation data to estimate
-    batchs = eachbatch(data; size=mdl.batch_size)
-
-    @progress "Batches" for (Y_obs_hue_b, Y_obs_sat_b, Y_obs_val_b, terms) in batchs
-        Yp_hue_b, Yp_sat_b, Yp_val_b = run(mdl.sess, [gg["Yp_hue"], gg["Yp_sat"], gg["Yp_val"]],  Dict(gg["terms"]=>terms, gg["keep_prob"]=>1.0))
-
-        append!(Y_obs_hue, Y_obs_hue_b)
-        append!(Y_obs_sat, Y_obs_sat_b)
-        append!(Y_obs_val, Y_obs_val_b)
-        Yp_hue = [Yp_hue; Yp_hue_b]
-        Yp_sat = [Yp_sat; Yp_sat_b]
-        Yp_val = [Yp_val; Yp_val_b]
-    end
+    Yp_hue, Yp_sat, Yp_val = run(mdl.sess, [gg["Yp_hue"], gg["Yp_sat"], gg["Yp_val"]],  Dict(gg["terms"]=>terms, gg["keep_prob"]=>1.0))
 
     @names_from begin
         perp_hue = descretized_perplexity(Y_obs_hue, Yp_hue)

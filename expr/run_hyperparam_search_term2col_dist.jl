@@ -9,13 +9,13 @@ using TensorFlow
 using JLD
 using FileIO
 
-const cldata = load_monroe_data(dev_as_test=true)
+const cldata = load_monroe_data(dev_as_train=true, dev_as_test=true)
 
 
 const g_output_res = 64
 
-function main(splay_std_dev_in_bins)
-    runname = joinpath("extrapolate_validation","sib$(splay_std_dev_in_bins)")
+function main(name, splay_std_dev_in_bins)
+    runname = joinpath(name,"sib$(splay_std_dev_in_bins)")
     println("begin $runname")
     datadir = joinpath(Pkg.dir("ColoringNames"), "models", "$runname")
     mkdir(datadir)
@@ -38,7 +38,7 @@ function main(splay_std_dev_in_bins)
     println("training $runname network")
     extra_data[:training_costs_o] = train!(mdl,
                                         cldata.train.terms_padded,
-                                        cldat.train.colors,
+                                        cldata.train.colors,
                                         log_path;
                                         splay_stddev=splay_std_dev,
                                         epochs=epochs
@@ -51,23 +51,7 @@ function main(splay_std_dev_in_bins)
     save(mdl, datadir; extra_data...)
 end
 
-main(0.5)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+main("tmp", rand())
 
 
 
