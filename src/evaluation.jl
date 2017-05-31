@@ -53,17 +53,12 @@ peak(predicted_class_probs::AbstractMatrix) = mapslices(peak, predicted_class_pr
 
 "Mean squared error"
 function mse(obs, preds)
-    mean(sumabs2(preds.-obs, 1))
-end
-
-function mse_from_peak(obs, predicted_class_probs::AbstractMatrix)
-    @assert(length(obs)==size(predicted_class_probs, 1))
-    preds = peak(predicted_class_probs)
-    mse(obs, preds)
+    mean(sumabs2(preds.-obs, 2))
 end
 
 function mse_from_peak{T<:AbstractMatrix}(obs::AbstractMatrix, predicted_class_probs::NTuple{3, T})
-    @assert size(obs,2)==length(predicted_class_probs)
+    @assert all(size.(collect(predicted_class_probs), 1) == size(obs, 1))
+    @assert size(obs,2)==length(predicted_class_probs) == 3
     preds = reduce(hcat, peak.(predicted_class_probs))
     mse(obs, preds)
 end

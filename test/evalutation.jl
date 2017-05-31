@@ -18,8 +18,8 @@ end
     @test bin_expected_value([1,2,3], 3) == [1/6, 1/2, 5/6 ]
 end
 
-@testset "Mean Square Error Peak" begin
-
+@testset "Peak" begin
+    
     @test peak([0.5, 2.5, 0.3]) == 1/2
     @test peak([0.5 0.2 0.3; 0.1 0.1 0.8]) ≈ [1/6, 5/6]
 
@@ -29,8 +29,4 @@ end
     three127 = [0.1 0.2 0.7; 0.1 0.2 0.7; 0.1 0.2 0.7]
     @test peak(three127) == reshape([5/6; 5/6; 5/6], (3,1))
 
-    @test mse_from_peak([3, 3, 3]/3, three127) ≈  mean(sum([0.5/3; 0.5/3; 0.5/3].^2))
-    @test mse_from_peak([3, 2, 3]/3, three127) ≈  mean(sum([0.5/3, 0.5/3, 0.5/3].^2))
-    @test mse_from_peak([3, 1.5, 3]/3, three127) ≈  mean(sum([0.5/3, 1.0/3, 0.5/3].^2))
-    @test mse_from_peak([3, 1.0, 3]/3, three127) ≈  mean(sum([0.5/3, 1.5/3, 0.5/3].^2))
 end
