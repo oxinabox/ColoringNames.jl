@@ -9,18 +9,15 @@ using TensorFlow
 using JLD
 using FileIO
 
-const cldata = load_monroe_data(dev_as_train=true, dev_as_test=true)
-
+const cldata = load_monroe_data(dev_as_train=false, dev_as_test=true)
 
 const g_output_res = 64
 
 function main(name, splay_std_dev_in_bins)
-    runname = joinpath(name,"sib$(splay_std_dev_in_bins)")
+    runname = joinpath(name,"$(now())_sib$(splay_std_dev_in_bins)")
     println("begin $runname")
     datadir = joinpath(Pkg.dir("ColoringNames"), "models", "$runname")
     mkdir(datadir)
-
-
 
     extra_data = @names_from begin
         executing_file = @__FILE__
@@ -51,7 +48,7 @@ function main(name, splay_std_dev_in_bins)
     save(mdl, datadir; extra_data...)
 end
 
-main("tmp", rand())
+main("good", 0.5)
 
 
 

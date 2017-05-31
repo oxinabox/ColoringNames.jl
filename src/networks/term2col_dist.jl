@@ -74,8 +74,7 @@ function init_terms_to_color_dist_network_session(
         term_lengths = indmin(terms, 1) - 1 #Last index is the one before the first occurance of 0 (the minimum element) Would be faster if could use find per dimentions
 
         emb_table = get_variable((n_term_classes+1, embedding_dim), Float32)
-        terms_emb = gather(emb_table, terms+1)
-        @show terms_emb
+        terms_emb = gather(emb_table, terms + Int32(1))
         cell = nn.rnn_cell.DropoutWrapper(nn.rnn_cell.GRUCell(hidden_layer_size), keep_prob)
         H, state = nn.dynamic_rnn(cell, terms_emb, term_lengths; dtype=Float32, time_major=true)
 
@@ -130,10 +129,11 @@ end
 
 
 function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_hsvps::NTuple{3},
-                                log_dir=nothing;
-                                batch_size=12_138,
-                                epochs=30, #From checking convergance at default parameters for network
-                                dropout_keep_prob=0.5f0)
+                log_dir=nothing;
+                batch_size=12_138,
+                epochs=30, #From checking convergance at default parameters for network
+                dropout_keep_prob=0.5f0)
+
     ss = mdl.sess.graph
     if log_dir!=nothing
         summary_op = Summaries.merge_all() #XXX: Does this break if the default graph has changed?
@@ -147,7 +147,7 @@ function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_h
     @progress "Epochs" for epoch_ii in 1:epochs
 
         data = shuffleobs((train_hsvps..., train_terms_padded))
-        batchs = eachbatch(data; size=batch_size)
+        batchs = eachbatch(data; maxsize=batch_size)
 
         @progress "Batches" for (hp_obs, sp_obs, vp_obs, terms) in batchs
 
@@ -218,10 +218,13 @@ end
 function evaluate(mdl::TermToColorDistributionNetwork, test_terms_padded, test_hsv)
     gg=mdl.sess.graph
     
-    data = obsview((test_hsv[:, 1], test_hsv[:,2], test_hsv[:,3], test_terms_padded))
-    Y_obs_hue, Y_obs_sat, Y_obs_val, terms = data
+    Y_obs_hue = test_hsv[:, 1]
+    Y_obs_sat = test_hsv[:, 2]
+    Y_obs_val = test_hsv[:, 3]
 
-    Yp_hue, Yp_sat, Yp_val = run(mdl.sess, [gg["Yp_hue"], gg["Yp_sat"], gg["Yp_val"]],  Dict(gg["terms"]=>terms, gg["keep_prob"]=>1.0))
+    Yp_hue, Yp_sat, Yp_val = run(mdl.sess,
+                                 [gg["Yp_hue"], gg["Yp_sat"], gg["Yp_val"]],
+                                 Dict(gg["terms"]=>test_terms_padded, gg["keep_prob"]=>1.0))
 
     @names_from begin
         perp_hue = descretized_perplexity(Y_obs_hue, Yp_hue)
