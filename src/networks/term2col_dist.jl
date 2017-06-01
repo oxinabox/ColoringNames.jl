@@ -76,7 +76,8 @@ function init_terms_to_color_dist_network_session(
         emb_table = get_variable((n_term_classes+1, embedding_dim), Float32)
         terms_emb = gather(emb_table, terms + Int32(1))
         cell = nn.rnn_cell.DropoutWrapper(nn.rnn_cell.GRUCell(hidden_layer_size), keep_prob)
-        H, state = nn.dynamic_rnn(cell, terms_emb, term_lengths; dtype=Float32, time_major=true)
+        Hs, state = nn.rnn(cell, terms_emb, term_lengths; dtype=Float32, time_major=true)
+        H = Hs[end]
 
         W1 = get_variable((hidden_layer_size, hidden_layer_size), Float32)
         B1 = get_variable((hidden_layer_size), Float32)
