@@ -27,7 +27,7 @@ function main(name, splay_std_dev_in_bins)
 
         splay_std_dev_in_bins=splay_std_dev_in_bins
         splay_std_dev = splay_std_dev_in_bins/g_output_res
-        epochs = 30
+        epochs = 50
     end
 
     println("initialising $runname network")
