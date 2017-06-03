@@ -117,7 +117,7 @@ end
 
 function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_hsv::AbstractMatrix,
                             log_dir=nothing;
-                            batch_size=12_138,
+                            batch_size=500_000,
                             epochs=30, dropout_keep_prob=0.5f0, splay_stddev=1/mdl.output_res)
 
     train_hsvps = splay_probabilities(train_hsv, mdl.output_res, splay_stddev)
@@ -131,7 +131,7 @@ end
 
 function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_hsvps::NTuple{3},
                 log_dir=nothing;
-                batch_size=12_138,
+                batch_size=500_000,
                 epochs=30, #From checking convergance at default parameters for network
                 dropout_keep_prob=0.5f0)
 
@@ -149,9 +149,13 @@ function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_h
 
         data = shuffleobs((train_hsvps..., train_terms_padded))
         batchs = eachbatch(data; maxsize=batch_size)
+        true_batch_size = nobs(data)/length(batchs)
+        if true_batch_size < 10_000
+            warn("Batch size is only $(true_batch_size)")
+        end
+
 
         @progress "Batches" for (hp_obs, sp_obs, vp_obs, terms) in batchs
-
             cost_o, optimizer_o = run(
                 mdl.sess,
                 [
@@ -227,6 +231,8 @@ function evaluate(mdl::TermToColorDistributionNetwork, test_terms_padded, test_h
                                  [gg["Yp_hue"], gg["Yp_sat"], gg["Yp_val"]],
                                  Dict(gg["terms"]=>test_terms_padded, gg["keep_prob"]=>1.0))
 
+    @show Yp_hue |> size
+    @show Y_obs_hue |> size
     @names_from begin
         perp_hue = descretized_perplexity(Y_obs_hue, Yp_hue)
         perp_sat = descretized_perplexity(Y_obs_sat, Yp_sat)

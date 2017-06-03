@@ -14,7 +14,8 @@ const cldata = load_monroe_data(dev_as_train=false, dev_as_test=true)
 const g_output_res = 64
 
 function main(name, splay_std_dev_in_bins)
-    runname = joinpath(name,"$(now())_sib$(splay_std_dev_in_bins)")
+    timestamp= Dates.format(now(), "yymmddHHMM")
+    runname = joinpath(name,"$(timestamp)_sib$(splay_std_dev_in_bins)")
     println("begin $runname")
     datadir = joinpath(Pkg.dir("ColoringNames"), "models", "$runname")
     mkdir(datadir)
@@ -32,6 +33,7 @@ function main(name, splay_std_dev_in_bins)
     println("initialising $runname network")
     mdl = TermToColorDistributionNetwork(cldata.encoding)
 
+#=
     println("training $runname network")
     extra_data[:training_costs_o] = train!(mdl,
                                         cldata.train.terms_padded,
@@ -41,8 +43,9 @@ function main(name, splay_std_dev_in_bins)
                                         epochs=epochs
                                         )
 
+=#
     println("evaluating $runname")
-    extra_data[:validation_set_results] = evaluate(mdl, cldata.test.terms_padded, cldata.test.colors)
+    extra_data[:dev_set_results] = evaluate(mdl, cldata.test.terms_padded, cldata.test.colors)
 
     println("saving $runname")
     save(mdl, datadir; extra_data...)

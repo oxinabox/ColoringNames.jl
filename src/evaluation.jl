@@ -57,8 +57,7 @@ function mse(obs, preds)
 end
 
 function mse_from_peak{T<:AbstractMatrix}(obs::AbstractMatrix, predicted_class_probs::NTuple{3, T})
-    @assert all(size.(collect(predicted_class_probs), 1) == size(obs, 1))
-    @assert size(obs,2)==length(predicted_class_probs) == 3
     preds = reduce(hcat, peak.(predicted_class_probs))
+    @assert size(preds, 1) == size(obs,1) "$(size(preds,1)) != $(size(obs,1))"
     mse(obs, preds)
 end
