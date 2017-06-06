@@ -117,7 +117,7 @@ end
 
 function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_hsv::AbstractMatrix,
                             log_dir=nothing;
-                            batch_size=500_000,
+                            batch_size=16_384,
                             epochs=30, dropout_keep_prob=0.5f0, splay_stddev=1/mdl.output_res)
 
     train_hsvps = splay_probabilities(train_hsv, mdl.output_res, splay_stddev)
@@ -131,7 +131,7 @@ end
 
 function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_hsvps::NTuple{3},
                 log_dir=nothing;
-                batch_size=500_000,
+                batch_size=16_384,
                 epochs=30, #From checking convergance at default parameters for network
                 dropout_keep_prob=0.5f0)
 
@@ -148,7 +148,7 @@ function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_h
     @progress "Epochs" for epoch_ii in 1:epochs
 
         data = shuffleobs((train_hsvps..., train_terms_padded))
-        batchs = eachbatch(data; maxsize=batch_size)
+        batchs = eachbatch(data; size=batch_size)
         true_batch_size = nobs(data)/length(batchs)
         if true_batch_size < 10_000
             warn("Batch size is only $(true_batch_size)")
@@ -192,6 +192,7 @@ function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_h
     end
     costs_o
 end
+
 
 
 function query(mdl::TermToColorDistributionNetwork,  input_text)

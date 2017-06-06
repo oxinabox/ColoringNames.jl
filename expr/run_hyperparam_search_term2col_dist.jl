@@ -28,6 +28,7 @@ function main(name, splay_std_dev_in_bins)
         splay_std_dev_in_bins=splay_std_dev_in_bins
         splay_std_dev = splay_std_dev_in_bins/g_output_res
         epochs = 50
+        batch_size=16_384
     end
 
     println("initialising $runname network")
@@ -39,6 +40,7 @@ function main(name, splay_std_dev_in_bins)
                                         cldata.train.colors,
                                         log_path;
                                         splay_stddev=splay_std_dev,
+                                        batch_size=batch_size,
                                         epochs=epochs
                                         )
 

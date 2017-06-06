@@ -18,7 +18,7 @@ const cldata = extrapolation_dataset(full_cldata, g_eval_texts)
 const g_output_res = 64
 
 function main(splay_std_dev_in_bins)
-    runname = joinpath("extrapolate_validation","sib$(splay_std_dev_in_bins)")
+    runname = joinpath("good","extrapolate_sib$(splay_std_dev_in_bins)")
     println("begin $runname")
     datadir = joinpath(Pkg.dir("ColoringNames"), "models", "$runname")
     mkdir(datadir)
@@ -32,12 +32,11 @@ function main(splay_std_dev_in_bins)
 
         splay_std_dev_in_bins=splay_std_dev_in_bins
         splay_std_dev = splay_std_dev_in_bins/g_output_res
-        epochs = 30
-        batch_size = 1_432
+        epochs = 50
     end
 
     println("initialising $runname network")
-    mdl = TermToColorDistributionNetwork(cldata.encoding; batch_size=batch_size)
+    mdl = TermToColorDistributionNetwork(cldata.encoding)
 
     println("training $runname network")
     extra_data[:training_costs_o] = train!(mdl,
