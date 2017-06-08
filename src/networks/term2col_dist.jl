@@ -232,8 +232,6 @@ function evaluate(mdl::TermToColorDistributionNetwork, test_terms_padded, test_h
                                  [gg["Yp_hue"], gg["Yp_sat"], gg["Yp_val"]],
                                  Dict(gg["terms"]=>test_terms_padded, gg["keep_prob"]=>1.0))
 
-    @show Yp_hue |> size
-    @show Y_obs_hue |> size
     @names_from begin
         perp_hue = descretized_perplexity(Y_obs_hue, Yp_hue)
         perp_sat = descretized_perplexity(Y_obs_sat, Yp_sat)
