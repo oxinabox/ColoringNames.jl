@@ -15,10 +15,10 @@ const g_eval_texts = rare_descriptions(full_cldata.train.texts, 100, 8)
 const cldata = extrapolation_dataset(full_cldata, g_eval_texts)
 
 @show size(cldata.dev.texts)
-const g_output_res = 64
+const g_output_res = 256
 
 function main(splay_std_dev_in_bins)
-    runname = joinpath("good","extrapolate_sib$(splay_std_dev_in_bins)")
+    runname = joinpath("highdim","extrapolate_sib$(splay_std_dev_in_bins)")
     println("begin $runname")
     datadir = joinpath(Pkg.dir("ColoringNames"), "models", "$runname")
     mkdir(datadir)
@@ -54,21 +54,9 @@ function main(splay_std_dev_in_bins)
     save(mdl, datadir; extra_data...)
 end
 
-main(0.5)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+for var in [4, 2, 1, 0.5, 0.25, 0.125]
+    main(var)
+end
 
 
 
