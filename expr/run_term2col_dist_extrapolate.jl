@@ -50,7 +50,7 @@ function main(splay_std_dev_in_bins)
                                         )
 
     println("Saving pre_eval, $runname")
-    preeval_dir = joinpath("datadir","pre_eval")
+    preeval_dir = joinpath(datadir,"pre_eval")
     mkdir(preeval_dir)
     save(mdl, preeval_dir; extra_data...)
 
