@@ -63,7 +63,12 @@ function main(splay_std_dev_in_bins)
 end
 
 for var in [4, 2, 1, 0.5, 0.25, 0.125]
-    main(var)
+    gc()
+    try
+        main(var)
+    catch ex
+        warn(ex)
+    end
 end
 
 
