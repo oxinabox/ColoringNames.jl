@@ -149,8 +149,8 @@ function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_h
 
         data = shuffleobs((train_hsvps..., train_terms_padded))
         batchs = eachbatch(data; size=batch_size)
-        true_batch_size = nobs(data)/length(batchs)
-        if true_batch_size < 10_000
+        true_batch_size = floor(nobs(data)/length(batchs))
+        if true_batch_size < 1_000
             warn("Batch size is only $(true_batch_size)")
         end
 

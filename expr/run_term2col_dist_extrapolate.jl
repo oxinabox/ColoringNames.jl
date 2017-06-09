@@ -33,6 +33,7 @@ function main(splay_std_dev_in_bins)
         splay_std_dev_in_bins=splay_std_dev_in_bins
         splay_std_dev = splay_std_dev_in_bins/g_output_res
         epochs = 50
+        batch_size = 5_000
     end
 
     println("initialising $runname network")
@@ -43,15 +44,22 @@ function main(splay_std_dev_in_bins)
                                         cldata.train.terms_padded,
                                         cldata.train.colors,
                                         log_path;
+                                        batch_size = batch_size,
                                         splay_stddev=splay_std_dev,
                                         epochs=epochs
                                         )
+
+    println("Saving pre_eval, $runname")
+    preeval_dir = joinpath("datadir","pre_eval")
+    mkdir(preeval_dir)
+    save(mdl, preeval_dir; extra_data...)
 
     println("evaluating $runname")
     extra_data[:dev_set_results] = evaluate(mdl, cldata.dev.terms_padded, cldata.dev.colors)
 
     println("saving $runname")
     save(mdl, datadir; extra_data...)
+    rm(preeval_dir; recursive=true)
 end
 
 for var in [4, 2, 1, 0.5, 0.25, 0.125]
