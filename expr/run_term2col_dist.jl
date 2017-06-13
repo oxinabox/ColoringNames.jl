@@ -9,16 +9,14 @@ using TensorFlow
 using JLD
 using FileIO
 
-const full_cldata = load_monroe_data(dev_as_train=false, dev_as_test=true)
+const cldata = load_monroe_data(dev_as_train=false, dev_as_test=true)
 
-const g_eval_texts = rare_descriptions(full_cldata.train.texts, 100, 8)
-const cldata = extrapolation_dataset(full_cldata, g_eval_texts)
 
 @show size(cldata.dev.texts)
 const g_output_res = 256
 
 function main(splay_std_dev_in_bins)
-    runname = joinpath("highdim","extrapolate_sib$(splay_std_dev_in_bins)")
+    runname = joinpath("highdim","sib$(splay_std_dev_in_bins)")
     println("begin $runname")
     datadir = joinpath(Pkg.dir("ColoringNames"), "models", "$runname")
     mkdir(datadir)
@@ -30,24 +28,23 @@ function main(splay_std_dev_in_bins)
 
         eval_texts = g_eval_texts
 
-        splay_std_dev_in_bins=splay_std_dev_in_bins
         splay_std_dev = splay_std_dev_in_bins/g_output_res
         epochs = 50
-        batch_size = 1_000
+        batch_size = 5_000
     end
 
     println("initialising $runname network")
     mdl = TermToColorDistributionNetwork(cldata.encoding; output_res=g_output_res)
 
     println("training $runname network")
-    extra_data[:training_costs_o] = train!(mdl,
-                                        cldata.train.terms_padded,
-                                        cldata.train.colors,
-                                        log_path;
-                                        batch_size = batch_size,
-                                        splay_stddev=splay_std_dev,
-                                        epochs=epochs
-                                        )
+    train!(mdl,
+            cldata.train.terms_padded,
+            cldata.train.colors,
+            log_path;
+            batch_size = batch_size,
+            splay_stddev=splay_std_dev,
+            epochs=epochs
+            )
 
     println("Saving pre_eval, $runname")
     preeval_dir = joinpath(datadir,"pre_eval")
@@ -62,7 +59,7 @@ function main(splay_std_dev_in_bins)
     rm(preeval_dir; recursive=true)
 end
 
-for var in [4, 2, 1, 0.5, 0.25, 0.125]
+for var in [0.5, 1, 2, 4, 0.25, 0.125]
     gc()
     try
         main(var)
@@ -70,10 +67,6 @@ for var in [4, 2, 1, 0.5, 0.25, 0.125]
         warn(ex)
     end
 end
-
-
-
-
 
 
 #EOF
