@@ -26,7 +26,6 @@ function main(splay_std_dev_in_bins)
         log_path = joinpath(datadir, "logs")
         mkdir(log_path)
 
-        eval_texts = g_eval_texts
 
         splay_std_dev = splay_std_dev_in_bins/g_output_res
         epochs = 50
