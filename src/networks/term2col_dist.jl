@@ -143,7 +143,6 @@ function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_h
         warn("No log_dir set during training; no logs will be kept.")
     end
 
-    costs_o = Float64[]
 
     @progress "Epochs" for epoch_ii in 1:epochs
 
@@ -156,12 +155,9 @@ function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_h
 
 
         @progress "Batches" for (hp_obs, sp_obs, vp_obs, terms) in batchs
-            cost_o, optimizer_o = run(
+            optimizer_o = run(
                 mdl.sess,
-                [
-                    ss["cost"],
-                    mdl.optimizer
-                ],
+                mdl.optimizer,
                 Dict(
                     ss["keep_prob"]=>dropout_keep_prob,
                     ss["terms"]=>terms,
@@ -171,7 +167,6 @@ function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_h
                 )
             )
 
-            push!(costs_o, cost_o)
         end
 
         #Log summary
@@ -190,7 +185,7 @@ function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_h
             write(summary_writer, summaries, epoch_ii)
         end
     end
-    costs_o
+    mdl
 end
 
 
