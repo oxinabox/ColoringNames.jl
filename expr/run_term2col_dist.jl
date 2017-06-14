@@ -29,7 +29,7 @@ function main(splay_std_dev_in_bins)
 
         splay_std_dev = splay_std_dev_in_bins/g_output_res
         epochs = 50
-        batch_size = 5_000
+        batch_size = 1_000
     end
 
     println("initialising $runname network")
