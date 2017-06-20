@@ -36,7 +36,7 @@ function main(g_output_res, splay_std_dev_in_bins)
     mdl = TermToColorDistributionEmpirical(g_output_res)
 
     println("training $runname network")
-    train!(mdl, cladata.train.text, train.dev.colors, splay_stddev=splay_std_dev)
+    train!(mdl, cldata.train.text, cldata.train.colors, splay_stddev=splay_std_dev)
     extra_data[:model]=mdl
 
     println("evaluating $runname")
