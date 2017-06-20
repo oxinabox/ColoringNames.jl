@@ -36,11 +36,11 @@ function main(g_output_res, splay_std_dev_in_bins)
     mdl = TermToColorDistributionEmpirical(g_output_res)
 
     println("training $runname network")
-    train!(mdl, cldata.train.text, cldata.train.colors, splay_stddev=splay_std_dev)
+    train!(mdl, cldata.train.texts, cldata.train.colors, splay_stddev=splay_std_dev)
     extra_data[:model]=mdl
 
     println("evaluating $runname")
-    extra_data[:validation_set_results] = evaluate(mdl, cldata.dev.text, cldata.dev.colors)
+    extra_data[:validation_set_results] = evaluate(mdl, cldata.dev.texts, cldata.dev.colors)
 
     println("saving $runname")
     save(joinpath(datadir, "emprical_model.jld"), stringify_keys(extra_data))
@@ -49,7 +49,7 @@ function main(g_output_res, splay_std_dev_in_bins)
     #Overwrite model with smooth one -- the rest is the same.
     mdl = laplace_smooth(mdl, cldata.train.text)
     extra_data[:mdl]=smoothed_mdl
-    extra_data[:validation_set_results] = evaluate(mdl, cldata.dev.text, cldata.dev.colors)
+    extra_data[:validation_set_results] = evaluate(mdl, cldata.dev.texts, cldata.dev.colors)
     save(joinpath(datadir, "smoothed_emprical_model.jld"), stringify_keys(extra_data))
 end
 
