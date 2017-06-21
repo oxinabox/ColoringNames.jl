@@ -47,7 +47,7 @@ function main(g_output_res, splay_std_dev_in_bins)
 ##########################################
     println("Smoothing")
     #Overwrite model with smooth one -- the rest is the same.
-    mdl = laplace_smooth(mdl, cldata.train.text)
+    mdl = laplace_smooth(mdl, cldata.train.texts)
     extra_data[:mdl]=smoothed_mdl
     extra_data[:validation_set_results] = evaluate(mdl, cldata.dev.texts, cldata.dev.colors)
     save(joinpath(datadir, "smoothed_emprical_model.jld"), stringify_keys(extra_data))
