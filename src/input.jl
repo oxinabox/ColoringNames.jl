@@ -8,7 +8,7 @@ function morpheme_tokenizer(replacement_rules)
             for (pat, sub) in replacement_rules
                 input = replace(input, pat, sub)
             end
-            split(input)
+            string.(split(input)) # Convert to plain strings, so they do not hold the original file as references
         end
     end
     tokenize
@@ -16,7 +16,7 @@ end
 
 function morpheme_tokenizer(rule_csv_file::AbstractString)
     rules = open(rule_csv_file) do fh
-        ObsView(readcsv(fh) , ObsDim.First())
+        ObsView(readcsv(fh), ObsDim.First())
     end
     morpheme_tokenizer(rules)
 end;
