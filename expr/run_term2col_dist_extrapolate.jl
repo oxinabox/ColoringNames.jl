@@ -33,23 +33,26 @@ function main(splay_std_dev_in_bins)
         splay_std_dev_in_bins=splay_std_dev_in_bins
         splay_std_dev = splay_std_dev_in_bins/g_output_res
         epochs = 50
-        batch_size = 1_000
+        batch_size = 500
     end
 
     println("initialising $runname network")
     mdl = TermToColorDistributionNetwork(cldata.encoding; output_res=g_output_res)
 
     println("training $runname network")
-    extra_data[:training_costs_o] = train!(mdl,
-                                        cldata.train.terms_padded,
-                                        cldata.train.colors,
-                                        log_path;
-                                        batch_size = batch_size,
-                                        splay_stddev=splay_std_dev,
-                                        epochs=epochs
-                                        )
+    train!(mdl,
+        cldata.train.terms_padded,
+        cldata.train.colors,
+        log_path;
+        batch_size = batch_size,
+        splay_stddev=splay_std_dev,
+        epochs=epochs
+    )
 
-    println("Saving pre_eval, $runname")
+println("Saving pre_eval, $runname")
+for (k,v) in extra_data
+        @show (k,typeof(v))
+    end
     preeval_dir = joinpath(datadir,"pre_eval")
     mkdir(preeval_dir)
     save(mdl, preeval_dir; extra_data...)
@@ -62,7 +65,7 @@ function main(splay_std_dev_in_bins)
     rm(preeval_dir; recursive=true)
 end
 
-for var in [4, 2, 1, 0.5, 0.25, 0.125]
+for var in [0.5]
     gc()
     try
         main(var)

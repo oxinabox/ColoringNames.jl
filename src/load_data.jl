@@ -36,7 +36,10 @@ function load_monroe_data(;dev_as_train=false, dev_as_test=true)
         if dev_as_test
             test = dev
         else
-            error("Loading the monroe dataset testset is not yet supported. Use the dev set for development. It is good practice, Yo.")
+            const test_raw = get_file(fh->readdlm(fh,'\t'), serv, "color", "monroe/test.csv")
+            const test_text = test_raw[:, 1]
+            const test_hsv, test_terms_padded, _ = prepare_data(test_raw, encoding; do_demacate=false)
+            test = ColorDataset(test_text, test_terms_padded, test_hsv)
         end
 
         ColorDatasets(encoding, train, dev, test)
@@ -59,8 +62,8 @@ function rare_descriptions(train_descs, n_rarest=100, min_distinct_remaining_tok
     end
     
     
-    rares = eltype(train_descs)[]
-       
+    rares = String[]
+
     for desc in keys(desc_freqs)
         if any(token_unique_usages[tok]<=min_distinct_remaining_tokens_usages for tok in tokenize(desc))
             continue
