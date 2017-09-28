@@ -1,8 +1,12 @@
 # ColoringNames
 
 This software is written in the Julia programming language.
-All requirements are given in the REQUIRE file.
+All requirements are given in the REQUIRE file.)
 
+## Paper Preprint
+This is an implementation of the work described in this [preprint](https://arxiv.org/abs/1709.09360)
+
+2017, Lyndon White, Roberto Togneri, Wei Liu, Mohammed Bennamoun; **Learning Distributions of Meant Color**
 
 ## Directories:
 
