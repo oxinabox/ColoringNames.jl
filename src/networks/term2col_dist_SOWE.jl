@@ -6,9 +6,9 @@ using JLD
 
 const Summaries = TensorFlow.summary
 
-export TermToColorDistributionNetwork, train!, query, evaluate, restore
+export TermToColorDistributionSOWE
 
-immutable TermToColorDistributionNetwork{NTerms, S<:AbstractString, OPT}
+immutable TermToColorDistributionSOWE{NTerms, S<:AbstractString, OPT}
     encoding::LabelEnc.NativeLabels{S, NTerms}
     sess::Session
     optimizer::OPT
@@ -19,25 +19,12 @@ immutable TermToColorDistributionNetwork{NTerms, S<:AbstractString, OPT}
 end
 
 
-function TermToColorDistributionNetwork{S<:AbstractString, NTerms}(encoding::LabelEnc.NativeLabels{S, NTerms};
-                                                max_tokens=4,
+function TermToColorDistributionSOWE{S<:AbstractString, n_term_classes}(encoding::LabelEnc.NativeLabels{S, NTerms};
+                                                n_steps=4,
                                                 output_res=64,
-                                                hidden_layer_size=128, #* at from search parameter space on dev set at output_res 64
-                                                embedding_dim=16 #* ditto
+                                                hidden_layer_size=128,
+                                                embedding_dim=300
                                                )
-
-    sess, optimizer = init_terms_to_color_dist_network_session(NTerms, max_tokens, hidden_layer_size, embedding_dim, output_res)
-    TermToColorDistributionNetwork(encoding, sess, optimizer,  max_tokens, output_res, hidden_layer_size, embedding_dim)
-end
-
-function init_terms_to_color_dist_network_session(
-        n_term_classes,
-        n_steps,
-        hidden_layer_size,
-        embedding_dim,
-        output_res
-    )
-
     graph = Graph()
     sess = Session(graph)
 
@@ -51,19 +38,23 @@ function init_terms_to_color_dist_network_session(
 
         emb_table = get_variable((n_term_classes+1, embedding_dim), Float32)
         terms_emb = gather(emb_table, terms + Int32(1))
-        cell = nn.rnn_cell.DropoutWrapper(nn.rnn_cell.GRUCell(hidden_layer_size), keep_prob)
-        Hs, state = nn.rnn(cell, terms_emb, term_lengths; dtype=Float32, time_major=true)
-        H = Hs[end]
+
 
         W1 = get_variable((hidden_layer_size, hidden_layer_size), Float32)
         B1 = get_variable((hidden_layer_size), Float32)
         Z1 = nn.dropout(nn.relu(H*W1 + B1), keep_prob)
 
 
+        W2 = get_variable((hidden_layer_size, hidden_layer_size), Float32)
+        B2 = get_variable((hidden_layer_size), Float32)
+        Z2 = nn.dropout(nn.relu(Z1*W2 + B2), keep_prob)
+
+        Z=Z2
+
         function declare_output_layer(name)
             W = get_variable("W_$name", (hidden_layer_size, output_res), Float32)
             B = get_variable("B_$name", (output_res), Float32)
-            Y_logit = Z1*W + B
+            Y_logit = Z*W + B
             Y = nn.softmax(Y_logit; name="Yp_$name")
             Yp_obs = placeholder(Float32; shape=[output_res, -1], name="Yp_obs_$name")'
             loss = nn.softmax_cross_entropy_with_logits(;labels=Yp_obs, logits=Y_logit, name="loss_$name")
@@ -87,8 +78,10 @@ function init_terms_to_color_dist_network_session(
     end
     run(sess, global_variables_initializer())
     sess, optimizer
-end
 
+
+    TermToColorDistributionSOWE(encoding, sess, optimizer,  max_tokens, output_res, hidden_layer_size, embedding_dim)
+end
 
 
 function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_hsv::AbstractMatrix,
@@ -96,7 +89,7 @@ function train!(mdl::TermToColorDistributionNetwork, train_terms_padded, train_h
                             batch_size=16_384,
                             epochs=30, dropout_keep_prob=0.5f0, splay_stddev=1/mdl.output_res)
 
-    train_hsvps = splay_probabilities(train_hsv, mdl.output_res, splay_stddev)
+    train_hsvps = descretize_probabilities(train_hsv, mdl.output_res, splay_stddev)
     train!(mdl, train_terms_padded, train_hsvps, log_dir;
         batch_size=batch_size,
         epochs=epochs,

@@ -17,7 +17,11 @@ function __init__()
     """,
     "https://cloudstor.aarnet.edu.au/plus/s/dwz6rsdG8tOgBA9/download",
     "00488395712f92d4c02c90672ccc302887926cb42331f20227bc9fd727714c49";
-    post_fetch_method=unpack
+    post_fetch_method = fn -> begin
+            unpack(fn)
+            mv.(joinpath.("monroe",readdir("monroe"), readdir("monroe")))
+            rm("monroe")
+        end
     )
 
     RegisterDataDep("word2vec 300d",

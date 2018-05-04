@@ -1,11 +1,13 @@
 module ColoringNames
 using MLLabelUtils
 using MLDataPattern
-using Iterators
+using IterTools
 using Memoize
 using StaticArrays
 using TensorFlow
 using StatsBase
+using DataDeps
+
 
 export morpheme_tokenizer, morpheme_tokenize, demarcate, rpad_to_matrix, @names_from, prepare_data, prepare_labels, hsv2colorant
 
@@ -34,4 +36,5 @@ include("evaluation.jl")
 
 include("networks/term2col_dist.jl")
 include("networks/term2col_dist_noml.jl")
+inlcude("model_saving.jl")
 end # module

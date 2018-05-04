@@ -91,7 +91,7 @@ end
 """
 Takes in a matrix of HSVs for colors,
 and encodes it as if each value was the expected value of a Gaussian (for S and V), or VonMises distribution (for H),
-and returns a histogram for each.
+and returns a blurred histogram for each.
 """
 function splay_probabilities(hsv, nbins, stddev=1/nbins)
     num_obs =  nobs(hsv, ObsDim.First())
@@ -114,4 +114,10 @@ function splay_probabilities!(hp,sp,vp, hsv; stddev=1/size(hp,1))
         gaussianhot!(@view(vp[:,ii]), hsv[ii, 3], stddev)
     end
     (hp, sp, vp)
+end
+
+
+
+function find_distribution(hsvs, nbins)
+    fit(Histogram, )
 end
