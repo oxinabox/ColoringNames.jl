@@ -19,6 +19,7 @@ function hsv2colorant(hsvs::AbstractMatrix)
     mapslices(hsv2colorant, hsvs, 2)
  end
 
+include("init_datadeps.jl")
 
 include("util.jl")
 include("tf_extra.jl")
