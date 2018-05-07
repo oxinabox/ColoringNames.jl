@@ -14,6 +14,7 @@ using CatViews
 using Base.Threads
 
 export morpheme_tokenizer, morpheme_tokenize, demarcate, rpad_to_matrix, @names_from, prepare_data, prepare_labels, hsv2colorant
+export TermToColorDistributionSOWE
 export find_distributions
 
 include("init_datadeps.jl")
@@ -33,5 +34,6 @@ include("evaluation.jl")
 
 include("networks/term2col_dist.jl")
 include("networks/term2col_dist_noml.jl")
-include("networks_common.jl")
+include("networks/term2col_dist_SOWE.jl")
+include("networks/networks_common.jl")
 end # module

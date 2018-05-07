@@ -36,7 +36,8 @@ function __init__()
     Paper:
         Tomas Mikolov, Ilya Sutskever, Kai Chen, Greg Corrado, and Jeffrey Dean. Distributed Representations of Words and Phrases and their Compositionality. In Proceedings of NIPS, 2013.
     """,
-    "https://s3.amazonaws.com/dl4j-distribution/GoogleNews-vectors-negative300.bin.gz";
+    "https://s3.amazonaws.com/dl4j-distribution/GoogleNews-vectors-negative300.bin.gz",
+    "21c05ae916a67a4da59b1d006903355cced7de7da1e42bff9f0504198c748da8";
     post_fetch_method=DataDeps.unpack
     )
 
