@@ -18,7 +18,7 @@ function __init__()
     "https://cloudstor.aarnet.edu.au/plus/s/dwz6rsdG8tOgBA9/download",
     "00488395712f92d4c02c90672ccc302887926cb42331f20227bc9fd727714c49";
     post_fetch_method = fn -> begin
-            unpack(fn)
+            DataDeps.unpack(fn)
             mv.(joinpath.("monroe",readdir("monroe"), readdir("monroe")))
             rm("monroe")
         end
@@ -37,7 +37,7 @@ function __init__()
         Tomas Mikolov, Ilya Sutskever, Kai Chen, Greg Corrado, and Jeffrey Dean. Distributed Representations of Words and Phrases and their Compositionality. In Proceedings of NIPS, 2013.
     """,
     "https://s3.amazonaws.com/dl4j-distribution/GoogleNews-vectors-negative300.bin.gz";
-    post_fetch_method=unpack
+    post_fetch_method=DataDeps.unpack
     )
 
 end

@@ -1,8 +1,5 @@
 
-import Juno: @progress
-using Distributions
-using CatViews
-using Base.Threads
+
 
 export gaussianhot, gaussianhot!,
     vonmiseshot, vonmiseshot!,
@@ -27,7 +24,11 @@ function discretize(distr, nbins, range_min, range_max)
     discretize!(Vector(nbins), distr, range_min, range_max)
 end
 
-function discretize!{T}(bins::AbstractVector{T}, distr, range_min, range_max)
+
+
+
+
+function discretize!{T}(bins::AbstractVector{T}, distr::Distribution, range_min, range_max)
     nbins = length(bins)
     @assert range_max > range_min
     bin_size = (range_max-range_min)/nbins
@@ -114,10 +115,4 @@ function splay_probabilities!(hp,sp,vp, hsv; stddev=1/size(hp,1))
         gaussianhot!(@view(vp[:,ii]), hsv[ii, 3], stddev)
     end
     (hp, sp, vp)
-end
-
-
-
-function find_distribution(hsvs, nbins)
-    fit(Histogram, )
 end

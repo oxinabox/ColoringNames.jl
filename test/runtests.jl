@@ -5,11 +5,12 @@ using Base.Test
 
 tests = [
     "prob.jl",
+    "prob2.jl"
     "input.jl",
     "util.jl",
     "tf_extra.jl",
     "evalutation.jl",
-    
+
     #Long Run Tests Tests
     "term2col.jl"
 ]

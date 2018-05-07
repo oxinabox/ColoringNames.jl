@@ -59,7 +59,7 @@ Warning: Does not support blocks that contain new scopes within them.
 """
 macro names_from(blk::Expr)
     names_in_block = names_candidates(blk)
-    namemap = Expr(:call, :Dict, [Expr(:(=>), QuoteNode(nn), nn) for nn in names_in_block]...)
+    namemap = Expr(:call, :Dict, [Expr(:call, :(=>), QuoteNode(nn), nn) for nn in names_in_block]...)
     quote
         begin
             $(esc(blk))
@@ -70,4 +70,3 @@ end
 
 "Returns a new dictionary, with the same key value pairs as the input, but with the keys converted to strings"
 stringify_keys(xx::Dict) = Dict(string(kk)=>vv for (kk, vv) in xx)
-

@@ -8,6 +8,6 @@ MLLabelUtils
 ProgressMeter
 Memoize
 StatsBase
-Iterators
+IterTools
 SwiftObjectStores
 StaticArrays

@@ -9,6 +9,7 @@ immutable ColorDataset{T,TP,TC}
     colors::TC
 end
 
+
 immutable ColorDatasets{E, CD<:ColorDataset}
     encoding::E
     train::CD

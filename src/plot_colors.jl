@@ -1,6 +1,14 @@
 using Plots
 export plot_colors, plot_hsv
-#pyplot() # Can't trust GR not to mess up colors
+
+"Converts and array 3 values between 0 and 1 for HSV to a colorant"
+hsv2colorant(x1, x2, x3) = RGB(HSV(360*x1, x2, x3))
+
+hsv2colorant(x::AbstractVector) = hsv2colorant(x...)
+function hsv2colorant(hsvs::AbstractMatrix)
+    @assert size(hsvs, 2) == 3
+    mapslices(hsv2colorant, hsvs, 2)
+end
 
 """
 EG:
@@ -50,10 +58,8 @@ function plot_hsv(hp::Vector, sp::Vector, vp::Vector; kwargs...)
     bar([hp, sp, vp],
         legend = false,
         layout=(1,3),
-        linewidth=0, 
+        linewidth=0,
         seriescolor=[h_bar_colors s_bar_colors v_bar_colors],
         xlabel=["Hue" "Saturation" "Value"],
         ylabel=["Probability" "" ""]; kwargs...)
 end
-
-
