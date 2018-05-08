@@ -15,7 +15,7 @@ using Base.Threads
 
 export morpheme_tokenizer, morpheme_tokenize, demarcate, rpad_to_matrix, @names_from, prepare_data, prepare_labels, hsv2colorant
 export TermToColorDistributionSOWE
-export find_distributions
+export find_distributions, load_word2vec_embeddings
 
 include("init_datadeps.jl")
 
@@ -24,6 +24,8 @@ include("tf_extra.jl")
 
 include("input.jl")
 include("load_data.jl")
+
+include("embeddings.jl")
 
 include("prob.jl")
 include("prob2.jl")

@@ -1,10 +1,6 @@
-using DataDeps
-include("init_datadeps.jl")()
-
-
 
 #Loads googles word2vec_embeddings
-function load_word2vec_embeddings(embedding_file, max_stored_vocab_size = 1_000_000, keep_words=Set())
+function load_word2vec_embeddings(embedding_file=datadep"word2vec 300d/GoogleNews-vectors-negative300.bin", max_stored_vocab_size = 1_000_000, keep_words=Set())
     #If there are anyt words in keep_words, then only those are kept, otherwise all are kept
 
     #Note: I know there actually <10^6 words in the vocab, when phrases are exluded, so lock the vocab size to this to save 70%RAM
@@ -15,7 +11,6 @@ function load_word2vec_embeddings(embedding_file, max_stored_vocab_size = 1_000_
 
 
     indexed_words = Array{String}(max_stored_vocab_size)
-    word_indexes = Dict{String,Int64}()
     LL = Array{Float32}(vector_size, max_stored_vocab_size)
 
     index = 1
@@ -26,7 +21,6 @@ function load_word2vec_embeddings(embedding_file, max_stored_vocab_size = 1_000_
         if !contains(word, "_") && (length(keep_words)==0 || word in keep_words ) #If it isn't a phrase
             LL[:,index]=vector./norm(vector)
             indexed_words[index] = word
-            word_indexes[word] = index
 
             index+=1
             if index>max_stored_vocab_size
@@ -40,24 +34,9 @@ function load_word2vec_embeddings(embedding_file, max_stored_vocab_size = 1_000_
 
     LL = LL[:,1:index-1] #throw away unused columns
     indexed_words = indexed_words[1:index-1] #throw away unused columns
-    LL, word_indexes, indexed_words
+    enc = labelenc(indexed_words)
+    LL, indexed_words, enc
 end
-
-
-word_vecs, word_indexes, vocab = load_word2vec_embeddings(
-    datadep"word2vec 300d/GoogleNews-vectors-negative300.bin";
-    )
-vocab, word_vecs
-
-haskey(word_indexes, "purplish")
-
-wv(word) = word_vecs[:,word_indexes[word]]
-
-mean.(abs.(wv("purplish") - (wv("purple") + wv("ish"))))
-sumabs(wv("purple") - (wv("red") + wv("blue")))
-sumabs(wv("orange") - (wv("red") + wv("yellow")))
-sumabs(wv("orange"))
-
 
 
 

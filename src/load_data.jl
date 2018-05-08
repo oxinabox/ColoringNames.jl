@@ -17,11 +17,11 @@ immutable ColorDatasets{E, CD<:ColorDataset}
     test::CD
 end
 
-function load_monroe_data(path=datadep"Munroe Color Corpus"; dev_as_train=false, dev_as_test=true)
+function load_monroe_data(path=datadep"Munroe Color Corpus"; encoding=nothing, dev_as_train=false, dev_as_test=true)
 
         const dev_raw = readdlm(joinpath(path,"dev.csv"), '\t')
         const dev_text = dev_raw[:, 1]
-        const dev_hsv, dev_terms_padded, encoding = prepare_data(dev_raw; do_demacate=false)
+        const dev_hsv, dev_terms_padded, encoding = prepare_data(dev_raw, encoding; do_demacate=false)
         dev = ColorDataset(dev_text, dev_terms_padded, dev_hsv)
 
         if dev_as_train

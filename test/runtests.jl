@@ -10,7 +10,7 @@ tests = [
     "util.jl",
     "tf_extra.jl",
     "evalutation.jl",
-
+    "embeddings.jl",
     #Long Run Tests Tests
     "term2col.jl"
 ]

@@ -19,21 +19,27 @@ immutable TermToColorDistributionSOWE{NTerms, S<:AbstractString, OPT}
 end
 
 
-function TermToColorDistributionSOWE{S<:AbstractString, n_term_classes}(encoding::LabelEnc.NativeLabels{S, NTerms};
-                                                output_res=256,
-                                                hidden_layer_size=128,
-                                                embedding_dim=300
-                                               )
+function TermToColorDistributionSOWE(word_vecs::AbstractMatrix;
+                                     output_res=256,
+                                     embedding_dim=300,
+                                     hidden_layer_size=embedding_dim,
+                                     nsteps=-1
+)
     graph = Graph()
     sess = Session(graph)
 
     ###################################
-
     @tf begin
         keep_prob = placeholder(Float32; shape=[])
-        input = placeholder(Float32; shape=[embedding_dim, -1])
-        
-        H = input
+
+        terms = placeholder(Int32; shape=[n_steps, -1])
+        term_lengths = indmin(terms, 1) - 1 #Last index is the one before the first occurance of 0 (the minimum element) Would be faster if could use find per dimentions
+
+        emb_table = word_vecs
+        terms_emb = gather(emb_table, terms + Int32(1))
+        @show terms_emb
+        H = sum(terms_emb,2)
+        @show H
 
         W1 = get_variable((hidden_layer_size, hidden_layer_size), Float32)
         B1 = get_variable((hidden_layer_size), Float32)
