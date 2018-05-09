@@ -9,7 +9,6 @@ const Summaries = TensorFlow.summary
 export TermToColorDistributionSOWE
 
 immutable TermToColorDistributionSOWE{NTerms, S<:AbstractString, OPT}
-    encoding::LabelEnc.NativeLabels{S, NTerms}
     sess::Session
     optimizer::OPT
     max_tokens::Int #Max nummber of tokens in a description
@@ -23,7 +22,7 @@ function TermToColorDistributionSOWE(word_vecs::AbstractMatrix;
                                      output_res=256,
                                      embedding_dim=300,
                                      hidden_layer_size=embedding_dim,
-                                     nsteps=-1
+                                     n_steps=-1
 )
     graph = Graph()
     sess = Session(graph)
@@ -35,10 +34,10 @@ function TermToColorDistributionSOWE(word_vecs::AbstractMatrix;
         terms = placeholder(Int32; shape=[n_steps, -1])
         term_lengths = indmin(terms, 1) - 1 #Last index is the one before the first occurance of 0 (the minimum element) Would be faster if could use find per dimentions
 
-        emb_table = word_vecs
-        terms_emb = gather(emb_table, terms + Int32(1))
+        emb_table = word_vecs'
+        terms_emb = gather(emb_table, terms)
         @show terms_emb
-        H = sum(terms_emb,2)
+        H = sum(terms_emb,1)
         @show H
 
         W1 = get_variable((hidden_layer_size, hidden_layer_size), Float32)
@@ -55,7 +54,7 @@ function TermToColorDistributionSOWE(word_vecs::AbstractMatrix;
         function declare_output_layer(name)
             W = get_variable("W_$name", (hidden_layer_size, output_res), Float32)
             B = get_variable("B_$name", (output_res), Float32)
-            Y_logit = Z*W + B
+            Y_logit = identity(Z*W + B, name="Yp_logit_$name")
             Y = nn.softmax(Y_logit; name="Yp_$name")
             Yp_obs = placeholder(Float32; shape=[output_res, -1], name="Yp_obs_$name")'
             loss = nn.softmax_cross_entropy_with_logits(;labels=Yp_obs, logits=Y_logit, name="loss_$name")
@@ -81,5 +80,5 @@ function TermToColorDistributionSOWE(word_vecs::AbstractMatrix;
     sess, optimizer
 
 
-    TermToColorDistributionSOWE(encoding, sess, optimizer,  max_tokens, output_res, hidden_layer_size, embedding_dim)
+    TermToColorDistributionSOWE(sess, optimizer,  n_steps, output_res, hidden_layer_size, embedding_dim)
 end

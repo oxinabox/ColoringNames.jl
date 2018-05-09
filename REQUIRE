@@ -1,13 +1,11 @@
-julia 0.5
-NamedColors
+julia 0.6
 TensorFlow
-ParserCombinator
-AbstractTrees
-MLDataUtils #dev
+MLDataUtils
 MLLabelUtils
 ProgressMeter
 Memoize
 StatsBase
 IterTools
-SwiftObjectStores
-StaticArrays
+DataDeps
+CatViews
+StringEncodings

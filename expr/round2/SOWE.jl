@@ -27,7 +27,3 @@ train!(mdl,
         batch_size = batch_size,
         epochs=epochs
         )
-
-TermToColorDistributionSOWE(
-
-    word_vecs)

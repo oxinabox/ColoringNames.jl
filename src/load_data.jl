@@ -1,7 +1,4 @@
-using SwiftObjectStores
-using DataStructures
-using MLDataPattern
-export load_monroe_data, rare_descriptions, ColorDatasets, ColorDataset, extrapolation_dataset
+
 
 immutable ColorDataset{T,TP,TC}
     texts::T
@@ -17,32 +14,32 @@ immutable ColorDatasets{E, CD<:ColorDataset}
     test::CD
 end
 
-function load_monroe_data(path=datadep"Munroe Color Corpus"; encoding=nothing, dev_as_train=false, dev_as_test=true)
+function load_munroe_data(path=datadep"Munroe Color Corpus"; dev_as_train=false, dev_as_test=true, encoding_=nothing)
+    encoding = encoding_ #weird bug seems to not like encoding as a kward
+    const dev_raw = readdlm(joinpath(path,"dev.csv"), '\t')
+    const dev_text = dev_raw[:, 1]
+    const dev_hsv, dev_terms_padded, encoding = prepare_data(dev_raw, encoding; do_demacate=false)
+    dev = ColorDataset(dev_text, dev_terms_padded, dev_hsv)
 
-        const dev_raw = readdlm(joinpath(path,"dev.csv"), '\t')
-        const dev_text = dev_raw[:, 1]
-        const dev_hsv, dev_terms_padded, encoding = prepare_data(dev_raw, encoding; do_demacate=false)
-        dev = ColorDataset(dev_text, dev_terms_padded, dev_hsv)
+    if dev_as_train
+        train = dev
+    else
+        const train_raw =  readdlm(joinpath(path,"train.csv"), '\t')
+        const train_text = train_raw[:, 1]
+        const train_hsv, train_terms_padded, _ = prepare_data(train_raw, encoding; do_demacate=false)
+        train = ColorDataset(train_text, train_terms_padded, train_hsv)
+    end
 
-        if dev_as_train
-            train = dev
-        else
-            const train_raw =  readdlm(joinpath(path,"train.csv"), '\t')
-            const train_text = train_raw[:, 1]
-            const train_hsv, train_terms_padded, _ = prepare_data(train_raw, encoding; do_demacate=false)
-            train = ColorDataset(train_text, train_terms_padded, train_hsv)
-        end
+    if dev_as_test
+        test = dev
+    else
+        const test_raw = readdlm(joinpath(path,"test.csv"), '\t')
+        const test_text = test_raw[:, 1]
+        const test_hsv, test_terms_padded, _ = prepare_data(test_raw, encoding; do_demacate=false)
+        test = ColorDataset(test_text, test_terms_padded, test_hsv)
+    end
 
-        if dev_as_test
-            test = dev
-        else
-            const test_raw = readdlm(joinpath(path,"test.csv"), '\t')
-            const test_text = test_raw[:, 1]
-            const test_hsv, test_terms_padded, _ = prepare_data(test_raw, encoding; do_demacate=false)
-            test = ColorDataset(test_text, test_terms_padded, test_hsv)
-        end
-
-        ColorDatasets(encoding, train, dev, test)
+    ColorDatasets(encoding, train, dev, test)
 end
 
 """
