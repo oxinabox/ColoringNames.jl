@@ -1,6 +1,6 @@
 
 #Loads googles word2vec_embeddings
-function load_word2vec_embeddings(embedding_file=datadep"word2vec 300d/GoogleNews-vectors-negative300.bin", max_stored_vocab_size = 1_000_000, keep_words=Set())
+function load_word2vec_embeddings(embedding_file=datadep"word2vec 300d/GoogleNews-vectors-negative300.bin"; max_stored_vocab_size = 1_000_000, keep_words=Set())
     #If there are any words in keep_words, then only those are kept, otherwise all are kept
 
     #Note: I know there actually <10^6 words in the vocab, when phrases are exluded, so lock the vocab size to this to save 70%RAM
@@ -41,7 +41,7 @@ end
 
 
 function load_text_embeddings(
-        embedding_file=datadep"FastText news en/wiki-news-300d-1M.vec",
+        embedding_file=datadep"FastText news en/wiki-news-300d-1M.vec";
         max_stored_vocab_size = 1_000_000_000,
         keep_words=Set())
    #If there are any words in keep_words, then only those are kept, otherwise all are kept

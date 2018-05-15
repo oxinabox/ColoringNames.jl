@@ -1,11 +1,11 @@
-export descretized_perplexity, find_bin, mse_from_peak, peak, bin_expected_value, total_descretized_logprob
+
 
 "Determine which bin a continous value belongs in"
 function find_bin(value, nbins, range_min=0.0, range_max=1.0)
     #TODO Check boundries
     portion = nbins * value/(range_max-range_min)
 
-    clamp(round(Int, portion), 1, nbins)
+    clamp.(round.(Int, portion), 1, nbins)
 end
 
 function bin_expected_value(bin, nbins) #GOLDPLATE consider non 0-1 range_scale
@@ -53,7 +53,7 @@ peak(predicted_class_probs::AbstractMatrix) = mapslices(peak, predicted_class_pr
 
 "Mean squared error"
 function mse(obs, preds)
-    mean(sumabs2(preds.-obs, 2))
+    mean(sum(abs2.(preds.-obs), 2))
 end
 
 function mse_from_peak{T<:AbstractMatrix}(obs::AbstractMatrix, predicted_class_probs::NTuple{3, T})

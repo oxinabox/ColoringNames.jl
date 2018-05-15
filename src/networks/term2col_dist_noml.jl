@@ -5,49 +5,36 @@ const Summaries = TensorFlow.summary
 
 export TermToColorDistributionEmpirical, laplace_smooth
 
-immutable TermToColorDistributionEmpirical{N}
+mutable struct TermToColorDistributionEmpirical
+    encoding::LabelEnc.NativeLabels
     output_res::Int
-    term2dist::Dict{String, NTuple{N, Vector{Float32}}}
-end
-
-function TermToColorDistributionEmpirical(output_res=64)
-    term2dist=Dict{String, NTuple{3, Vector{Float32}}}()
-    TermToColorDistributionEmpirical(output_res, term2dist)
-end
-
-function train!(mdl::TermToColorDistributionEmpirical, train_terms, train_hsv::AbstractMatrix;
-                splay_stddev=1/mdl.output_res)
-
-    train_hsvps = splay_probabilities(train_hsv, mdl.output_res, splay_stddev)
-    train!(mdl, train_terms, train_hsvps)
-
-end
-
-
-function train!{N}(mdl::TermToColorDistributionEmpirical{N}, train_terms, train_ps_s::NTuple{N})
-    @progress "averaging obs" for (lbl, inds) in labelmap(train_terms)
-        !haskey(mdl.term2dist, lbl) || error("Distribution for $lbl already trained")
-        dists = mdl.term2dist[lbl] = tuple((zeros(Float32, mdl.output_res) for _ in 1:N)...)
-
-        for (dist, train_ps) in zip(dists, train_ps_s)
-            for ii in inds
-                dist .+= train_ps[:, ii]
-            end
-            dist ./= length(inds)
-        end
+    hsvp::NTuple{3, Array{Float32,2}}
+    function TermToColorDistributionEmpirical(output_res=64)
+        ret = new()
+        ret.output_res = output_res
+        ret
     end
-    mdl
+end
+
+output_res(mdl::TermToColorDistributionEmpirical) = mdl.output_res
+
+
+
+function train!(mdl::TermToColorDistributionEmpirical, train_text, train_terms_padded, train_hsvps::NTuple{3})
+    mdl.encoding = labelenc(train_text)
+    mdl.hsvp = train_hsvps
 end
 
 
 function query(mdl::TermToColorDistributionEmpirical,  input_text)
-    mdl.term2dist[input_text]
+    ind = convertlabel(LabelEnc.Indices, input_text, mdl.encoding)
+    mdl.hsvp[1][:,ind], mdl.hsvp[2][:, ind], mdl.hsvp[3][:, ind]
 end
 
 
 "Run all evalutations, returning a dictionary of results"
-function evaluate{N}(mdl::TermToColorDistributionEmpirical{N}, test_terms, test_hsv)
-    Yps = [Matrix{Float32}(length(test_terms), mdl.output_res) for ii in 1:N]
+function evaluate(mdl::TermToColorDistributionEmpirical, test_texts, test_terms_padded, test_hsv)
+    Yps = [Matrix{Float32}(length(test_texts), mdl.output_res) for ii in 1:N]
     
     for (term_ii, term) in enumerate(test_terms)
         for (dist_ii, ps) in enumerate(query(mdl, term))
@@ -66,7 +53,7 @@ function evaluate{N}(mdl::TermToColorDistributionEmpirical{N}, test_terms, test_
 end
 
 
-function laplace_smooth{N}(mdl::TermToColorDistributionEmpirical{N}, train_text)
+function laplace_smooth!(mdl::TermToColorDistributionEmpirical, train_text)
     lblfreqs = Dict(lbl=>length(inds) for (lbl, inds) in labelmap(train_text))
     
     function smooth(ps, lbl)
@@ -75,5 +62,5 @@ function laplace_smooth{N}(mdl::TermToColorDistributionEmpirical{N}, train_text)
     end
     term2dist= Dict(lbl=>tuple((smooth(ps, lbl) for ps in pss)...) for (lbl, pss) in mdl.term2dist)
     
-    TermToColorDistributionEmpirical(mdl.output_res, term2dist)
+    mdl
 end

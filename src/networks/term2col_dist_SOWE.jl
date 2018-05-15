@@ -8,21 +8,18 @@ const Summaries = TensorFlow.summary
 
 export TermToColorDistributionSOWE
 
-immutable TermToColorDistributionSOWE{NTerms, S<:AbstractString, OPT}
+immutable TermToColorDistributionSOWE{OPT, ENC} <: AbstractTermToColorDistributionML
+    enc::ENC
     sess::Session
     optimizer::OPT
-    max_tokens::Int #Max nummber of tokens in a description
-    output_res::Int
-    hidden_layer_size::Int
-    embedding_dim::Int
 end
 
 
-function TermToColorDistributionSOWE(word_vecs::AbstractMatrix;
+function TermToColorDistributionSOWE(enc, word_vecs=rand(300,nlabel(enc))::AbstractMatrix;
                                      output_res=256,
-                                     embedding_dim=300,
-                                     hidden_layer_size=embedding_dim,
-                                     n_steps=-1
+                                     hidden_layer_size=size(word_vecs,1),
+                                     n_steps=-1,
+                                     learning_rate=0.01
 )
     graph = Graph()
     sess = Session(graph)
@@ -34,11 +31,10 @@ function TermToColorDistributionSOWE(word_vecs::AbstractMatrix;
         terms = placeholder(Int32; shape=[n_steps, -1])
         term_lengths = indmin(terms, 1) - 1 #Last index is the one before the first occurance of 0 (the minimum element) Would be faster if could use find per dimentions
 
-        emb_table = word_vecs'
-        terms_emb = gather(emb_table, terms)
-        @show terms_emb
+        emb_table = [zeros(size(word_vecs,1))'; word_vecs'] # add an extra-first row for padding
+        terms_emb = gather(emb_table, terms+1) # move past the first row we added for zeros)
+
         H = sum(terms_emb,1)
-        @show H
 
         W1 = get_variable((hidden_layer_size, hidden_layer_size), Float32)
         B1 = get_variable((hidden_layer_size), Float32)
@@ -48,8 +44,16 @@ function TermToColorDistributionSOWE(word_vecs::AbstractMatrix;
         W2 = get_variable((hidden_layer_size, hidden_layer_size), Float32)
         B2 = get_variable((hidden_layer_size), Float32)
         Z2 = nn.dropout(nn.relu(Z1*W2 + B2), keep_prob)
+        
+        W3 = get_variable((hidden_layer_size, hidden_layer_size), Float32)
+        B3 = get_variable((hidden_layer_size), Float32)
+        Z3 = nn.dropout(nn.relu(Z2*W3 + B3), keep_prob)
+        
+        W4 = get_variable((hidden_layer_size, hidden_layer_size), Float32)
+        B4 = get_variable((hidden_layer_size), Float32)
+        Z4 = nn.dropout(nn.relu(Z3*W4 + B4), keep_prob)
 
-        Z=Z2
+        Z=Z4
 
         function declare_output_layer(name)
             W = get_variable("W_$name", (hidden_layer_size, output_res), Float32)
@@ -69,7 +73,7 @@ function TermToColorDistributionSOWE(word_vecs::AbstractMatrix;
 
 
         cost = reduce_mean(loss_hue + loss_sat + loss_val)
-        optimizer = train.minimize(train.AdamOptimizer(), cost)
+        optimizer = train.minimize(train.AdamOptimizer(learning_rate), cost)
 
         # Generate some summary operations
         summary_cost = Summaries.scalar("cost", cost)
@@ -80,5 +84,5 @@ function TermToColorDistributionSOWE(word_vecs::AbstractMatrix;
     sess, optimizer
 
 
-    TermToColorDistributionSOWE(sess, optimizer,  n_steps, output_res, hidden_layer_size, embedding_dim)
+    TermToColorDistributionSOWE(enc, sess, optimizer)
 end

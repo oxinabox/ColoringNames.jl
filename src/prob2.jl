@@ -1,15 +1,27 @@
 function find_distributions(data::ColorDataset, nbins)
+    
+    grps = collect(groupby(last, enumerate(data.texts)))
+    len = length(grps)
+    nsteps = size(data.terms_padded,1)
 
-    map(groupby(last, enumerate(data.texts))) do grp
-        ind_start, text = first(grp)
+    texts = Vector{String}(len)
+    terms = Matrix{Int}(nsteps, len)
+    hs = Matrix{Float32}(nbins, len)
+    ss = Matrix{Float32}(nbins, len)
+    vs = Matrix{Float32}(nbins, len)
+
+    for (ii, grp) in enumerate(grps)
+        
+        ind_start, texts[ii] = first(grp)
         ind_end  = first(last(grp))
 
         inds = ind_start:ind_end # faster to slice with ranges
-        terms = data.terms_padded[:, first(inds)]
+        terms[:, ii] = data.terms_padded[:, first(inds)]
+        
         colors = data.colors[inds, :]
-
-        text, terms, find_distribution(colors, nbins)
+        hs[:,ii], ss[:,ii], vs[:,ii] = find_distribution(colors, nbins)
     end
+    texts, terms, (hs, ss, vs)
 end
 
 function find_distribution(colors::AbstractMatrix, nbins)

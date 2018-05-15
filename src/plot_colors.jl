@@ -1,5 +1,3 @@
-using Plots
-export plot_colors, plot_hsv
 
 "Converts and array 3 values between 0 and 1 for HSV to a colorant"
 hsv2colorant(x1, x2, x3) = RGB(HSV(360*x1, x2, x3))

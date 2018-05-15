@@ -1,5 +1,3 @@
-
-
 immutable ColorDataset{T,TP,TC}
     texts::T
     terms_padded::TP
@@ -13,6 +11,8 @@ immutable ColorDatasets{E, CD<:ColorDataset}
     dev::CD
     test::CD
 end
+
+
 
 function load_munroe_data(path=datadep"Munroe Color Corpus"; dev_as_train=false, dev_as_test=true, encoding_=nothing)
     encoding = encoding_ #weird bug seems to not like encoding as a kward
@@ -104,4 +104,16 @@ function extrapolation_dataset(base_dataset, restricted_texts)
     )
 
 
+end
+
+###########
+
+
+
+function load_color_nameset(tokenize = morpheme_tokenize)
+    many_names = reduce(union!, Set{String}(), tokenize.(collect(keys(NamedColors.ALL_COLORS))))
+    union!(many_names, ["caucasian", "darker", "pretty", "nude", "skin", "spam", "yuck", "hiccup", "horrible", "colour", "flourescent", "tone", "flesh"])
+    union!(many_names, ["newspaper", "goverment", "friendly", "danger", "safety"])
+    union!(many_names, map(lowercase, many_names))
+    many_names
 end

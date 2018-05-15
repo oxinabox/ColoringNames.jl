@@ -1,4 +1,7 @@
 
+
+
+
 function FileIO.save(mdl, save_dir; extra_info...)
     params = Dict(string(nn)=>getfield(mdl,nn) for nn in fieldnames(mdl) if !(nn in [:sess, :optimizer]))
     for (kk, vv) in extra_info
@@ -25,39 +28,43 @@ end
 
 
 
-function train!(mdl, train_terms_padded, train_hsv::AbstractMatrix,
-                            log_dir=nothing;
-                            batch_size=16_384,
-                            epochs=30, dropout_keep_prob=0.5f0, splay_stddev=1/mdl.output_res)
+function train!(mdl, cldata, args...; kwargs...)
 
-    train_hsvps = splay_probabilities(train_hsv, mdl.output_res, splay_stddev)
-    train!(mdl, train_terms_padded, train_hsvps, log_dir;
-        batch_size=batch_size,
-        epochs=epochs,
-        dropout_keep_prob=dropout_keep_prob)
-
+    train_text, train_terms_padded, train_hsvps =  find_distributions(cldata.train, output_res(mdl))
+    train!(mdl, train_text, train_terms_padded, train_hsvps, args...; kwargs...)
 end
+            
 
+######### ML methods
 
-function train!(mdl, train_terms_padded, train_hsvps::NTuple{3},
-                log_dir=nothing;
-                batch_size=16_384,
-                epochs=30, #From checking convergance at default parameters for network
-                dropout_keep_prob=0.5f0)
+abstract type AbstractTermToColorDistributionML end
+            
+            
+output_res(mdl::AbstractTermToColorDistributionML) = TensorFlow.get_shape(mdl.sess.graph["Yp_obs_hue"], 1)
+n_steps(mdl::AbstractTermToColorDistributionML) = TensorFlow.get_shape(mdl.sess.graph["terms"], 1)
+
+function train!(mdl::AbstractTermToColorDistributionML, train_text, train_terms_padded, train_hsvps::NTuple{3};
+                log_dir=nothing,
+                batch_size=min(2^14, nobs(train_terms_padded)),
+                dropout_keep_prob=0.5f0,
+                min_epochs=300,
+                max_epochs=30_000,
+                early_stopping = ()->0.0   
+                )
 
     ss = mdl.sess.graph
     if log_dir!=nothing
-        summary_op = Summaries.merge_all() #XXX: Does this break if the default graph has changed?
+        summary_op = Summaries.merge_all() #FEAR: Does this break if the default graph has changed?
         summary_writer = Summaries.FileWriter(log_dir; graph=ss)
     else
         warn("No log_dir set during training; no logs will be kept.")
     end
 
-
-    @progress "Epochs" for epoch_ii in 1:epochs
+    prev_es_loss = early_stopping()
+    @progress "Epochs" for epoch_ii in 1:max_epochs
 
         data = shuffleobs((train_hsvps..., train_terms_padded))
-        batchs = eachbatch(data; size=batch_size)
+        batchs = eachbatch(data; maxsize=batch_size)
         true_batch_size = floor(nobs(data)/length(batchs))
         if true_batch_size < 0.5*batch_size
             warn("Batch size is only $(true_batch_size)")
@@ -81,7 +88,8 @@ function train!(mdl, train_terms_padded, train_hsvps::NTuple{3},
 
         #Log summary
         if log_dir!=nothing
-            (hp_obs, sp_obs, vp_obs, terms) = first(batchs) #use the first batch to eval on, the one we trained least recently.  they are shuffled every epoch anyway
+            (hp_obs, sp_obs, vp_obs, terms) = first(batchs)
+            # use the first batch to eval on, the one we trained least recently.  they are shuffled every epoch anyway
             summaries = run(mdl.sess, summary_op,
                     Dict(
                         ss["keep_prob"]=>1.0,
@@ -94,17 +102,26 @@ function train!(mdl, train_terms_padded, train_hsvps::NTuple{3},
 
             write(summary_writer, summaries, epoch_ii)
         end
+                    
+        #Early stopping
+        if epoch_ii > min_epochs
+            es_loss = early_stopping()
+            if es_loss > prev_es_loss
+                break
+            end
+            prev_es_loss = es_loss
+        end
     end
     mdl
 end
 
 
 
-function query(mdl,  input_text)
+function query(mdl,  input_text, encoding=mdl.encoding, max_tokens=n_steps(mdl))
     label = input_text
-    labels, _ = prepare_labels([label], mdl.encoding, do_demacate=false)
+    labels, _ = prepare_labels([label], encoding, do_demacate=false)
 
-    nsteps_to_pad = mdl.max_tokens - size(labels,1)
+    nsteps_to_pad = max(max_tokens - size(labels,1), 0)
 
     padded_labels = [labels; zeros(Int, nsteps_to_pad)]
     ss=mdl.sess.graph
@@ -123,10 +140,11 @@ function query(mdl,  input_text)
 
     hp[1,:], sp[1,:], vp[1,:]
 end
-
+            
+evaluate(mdl, testdata::ColorDataset) = evaluate(mdl, testdata.texts, testdata.terms_padded, testdata.colors)
 
 "Run all evalutations, returning a dictionary of results"
-function evaluate(mdl, test_terms_padded, test_hsv)
+function evaluate(mdl, test_texts, test_terms_padded, test_hsv)
     gg=mdl.sess.graph
 
     Y_obs_hue = test_hsv[:, 1]
