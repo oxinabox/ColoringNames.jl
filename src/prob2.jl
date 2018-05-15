@@ -1,4 +1,6 @@
-function find_distributions(data::ColorDataset, nbins)
+find_distributions(data::ColorDataset, nbins, smooth::Bool) = find_distributions(data, nbins, Val{smooth}())
+
+function find_distributions(data::ColorDataset, nbins, smooth::Val)
     
     grps = collect(groupby(last, enumerate(data.texts)))
     len = length(grps)
@@ -18,37 +20,67 @@ function find_distributions(data::ColorDataset, nbins)
         inds = ind_start:ind_end # faster to slice with ranges
         terms[:, ii] = data.terms_padded[:, first(inds)]
         
-        colors = data.colors[inds, :]
-        hs[:,ii], ss[:,ii], vs[:,ii] = find_distribution(colors, nbins)
+        colors = @view data.colors[inds, :]
+        hs[:,ii], ss[:,ii], vs[:,ii] = find_distribution(colors, nbins, smooth)
     end
     texts, terms, (hs, ss, vs)
 end
 
-function find_distribution(colors::AbstractMatrix, nbins)
-    map(obsview(colors)) do ch
-        find_distribution(ch, nbins)
-    end
+function find_distribution(colors::AbstractMatrix, nbins, smooth::Val{false})
+    hs = do_not_smooth(@view(colors[:,1]), nbins) |> first
+    ss = do_not_smooth(@view(colors[:,2]), nbins) |> first
+    vs = do_not_smooth(@view(colors[:,3]), nbins) |> first
+    hs, vs, ss
 end
 
-function find_distribution(channel::AbstractVector, nbins)
-    # PREMOPT: THis could be much faster if we just looped through each edge
-    @assert(all(0 .<= channel .<= 1))
-
-    starts = 0 : 1/nbins : 1-1/nbins
-    ends = starts .+ 1/nbins
-    hits = starts .<= channel' .<= ends
-    normed_hits = mapslices(hits,1) do col
-        # Split anything that was on the boundry into 0.5 in each side
-        col/sum(col)
-    end
-    mean(normed_hits, 2) |> vec
+function find_distribution(colors::AbstractMatrix, nbins, smooth::Val{true})
+    hs = wraparound_kde_smooth((@view colors[:,1]), nbins) |> first
+    ss = truncated_kde_smooth((@view colors[:,2]), nbins) |> first
+    vs = truncated_kde_smooth((@view colors[:,3]), nbins) |> first
+    hs, vs, ss
 end
 
 
+## Smoothers 
+
+function do_not_smooth(data, npoints)
+    midpoints = KernelDensity.kde_range((0,1), npoints)
+    dist = KernelDensity.tabulate(data, midpoints)
+    dist.density./=sum(dist.density)
+    dist.density, dist.x
+end
 
 
+function truncated_kde_smooth(data, npoints, kde_fun = kde_lscv)
+    fake_boundry = (-0.5, 1.5)
+    fake_npoints = 2npoints
 
+    dist = kde_fun(data, npoints=fake_npoints, boundary=fake_boundry)
+    density = dist.density
+    density./=sum(density)
+    inside = density[npoints÷2+1: end - npoints÷2]
+    @assert length(inside)==npoints
+    lower = @view density[1:npoints÷2]
+    upper = @view density[end-npoints÷2+1:end]
+    @assert length(lower)==npoints÷2
+    @assert length(upper)==npoints÷2
+    excess_mass = sum(lower) + sum(upper)
+    @assert 0<=excess_mass<=0.5 
+    inside./= 1-excess_mass
+    @assert sum(inside)≈ 1
+    inside, dist.x[npoints÷2+1: end - npoints÷2]
+end
 
+function wraparound_kde_smooth(data, npoints)
+    # Because of the periodic nature of FFT used to implement kde
+    # It is actually wrap around by default
+    # If you specify tight boundries
+    boundry = (0, 1)
+    dist = kde_lscv(data, npoints=npoints, boundary=boundry)
+    dist.density./=sum(dist.density)
+    
+    dist.density, dist.x
+end
 
 
 #

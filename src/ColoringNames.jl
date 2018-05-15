@@ -15,6 +15,7 @@ using StaticArrays
 import NamedColors
 using FileIO, JLD
 using Plots
+using KernelDensity
 
 export plot_colors, plot_hsv
 

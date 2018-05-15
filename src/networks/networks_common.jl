@@ -28,9 +28,9 @@ end
 
 
 
-function train!(mdl, cldata, args...; kwargs...)
+function train!(mdl, cldata, smoothing, args...; kwargs...)
 
-    train_text, train_terms_padded, train_hsvps =  find_distributions(cldata.train, output_res(mdl))
+    train_text, train_terms_padded, train_hsvps =  find_distributions(cldata.train, output_res(mdl), smoothing)
     train!(mdl, train_text, train_terms_padded, train_hsvps, args...; kwargs...)
 end
             
