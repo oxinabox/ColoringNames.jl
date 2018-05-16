@@ -17,10 +17,8 @@ using FileIO, JLD
 using Plots
 using KernelDensity
 
-export plot_colors, plot_hsv
-
-
-export morpheme_tokenizer, morpheme_tokenize, demarcate, rpad_to_matrix, @names_from, prepare_data, prepare_labels, hsv2colorant
+export plot_colors, plot_hsv, plot_query
+export morpheme_tokenize, rpad_to_matrix, @names_from, prepare_data, prepare_labels, hsv2colorant
 export descretized_perplexity, find_bin, mse_from_peak, peak, bin_expected_value, total_descretized_logprob
 export load_munroe_data, rare_descriptions, ColorDatasets, ColorDataset, extrapolation_dataset
 export stringify_keys

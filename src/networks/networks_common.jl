@@ -28,41 +28,56 @@ end
 
 
 
-function train!(mdl, cldata, smoothing, args...; kwargs...)
+function train!(mdl, cldata::ColorDatasets, smoothing, args...; kwargs...)
 
     train_text, train_terms_padded, train_hsvps =  find_distributions(cldata.train, output_res(mdl), smoothing)
-    train!(mdl, train_text, train_terms_padded, train_hsvps, args...; kwargs...)
+    df_kwargs = default_train_kwargs(mdl, cldata, smoothing)
+    train!(mdl, train_text, train_terms_padded, train_hsvps, args...; df_kwargs..., kwargs...)
+end
+            
+function plot_query(mdl, input_data;  kwargs...)
+    plot_hsv(query(mdl, input_data)...; title=input_data)              
 end
             
 
+function default_train_kwargs(mdl, cldata, smoothing)
+    Dict()
+end
+            
 ######### ML methods
 
-abstract type AbstractTermToColorDistributionML end
+abstract type AbstractModelML end
+abstract type AbstractDistEstML <: AbstractModelML  end
+            
+function default_train_kwargs(mdl::AbstractDistEstML, cldata, smoothing)
+    Dict(:early_stopping => () ->evaluate(mdl, cldata.dev)[:perp])
+end
             
             
-output_res(mdl::AbstractTermToColorDistributionML) = TensorFlow.get_shape(mdl.sess.graph["Yp_obs_hue"], 1)
-n_steps(mdl::AbstractTermToColorDistributionML) = TensorFlow.get_shape(mdl.sess.graph["terms"], 1)
+output_res(mdl::AbstractModelML) = TensorFlow.get_shape(mdl.sess.graph["Yp_obs_hue"], 1)
+n_steps(mdl::AbstractModelML) = TensorFlow.get_shape(mdl.sess.graph["terms"], 1)
 
-function train!(mdl::AbstractTermToColorDistributionML, train_text, train_terms_padded, train_hsvps::NTuple{3};
+function train!(mdl::AbstractModelML, train_text, train_terms_padded, train_hsvps::NTuple{3};
                 log_dir=nothing,
                 batch_size=min(2^14, nobs(train_terms_padded)),
                 dropout_keep_prob=0.5f0,
                 min_epochs=300,
                 max_epochs=30_000,
-                early_stopping = ()->0.0   
+                early_stopping = ()->0.0,
+                check_freq = 50
                 )
 
     ss = mdl.sess.graph
     if log_dir!=nothing
-        summary_op = Summaries.merge_all() #FEAR: Does this break if the default graph has changed?
         summary_writer = Summaries.FileWriter(log_dir; graph=ss)
     else
         warn("No log_dir set during training; no logs will be kept.")
     end
 
     prev_es_loss = early_stopping()
-    @progress "Epochs" for epoch_ii in 1:max_epochs
+    for epoch_ii in 1:max_epochs
 
+        # Setup Batches
         data = shuffleobs((train_hsvps..., train_terms_padded))
         batchs = eachbatch(data; maxsize=batch_size)
         true_batch_size = floor(nobs(data)/length(batchs))
@@ -70,9 +85,10 @@ function train!(mdl::AbstractTermToColorDistributionML, train_text, train_terms_
             warn("Batch size is only $(true_batch_size)")
         end
 
-
-        @progress "Batches" for (hp_obs, sp_obs, vp_obs, terms) in batchs
-            optimizer_o = run(
+        
+        # Each Batch
+        for (hp_obs, sp_obs, vp_obs, terms) in batchs
+            run(
                 mdl.sess,
                 mdl.optimizer,
                 Dict(
@@ -85,31 +101,29 @@ function train!(mdl::AbstractTermToColorDistributionML, train_text, train_terms_
             )
 
         end
-
-        #Log summary
-        if log_dir!=nothing
-            (hp_obs, sp_obs, vp_obs, terms) = first(batchs)
-            # use the first batch to eval on, the one we trained least recently.  they are shuffled every epoch anyway
-            summaries = run(mdl.sess, summary_op,
-                    Dict(
-                        ss["keep_prob"]=>1.0,
-                        ss["terms"]=>terms,
-                        ss["Yp_obs_hue"]=>hp_obs,
-                        ss["Yp_obs_sat"]=>sp_obs,
-                        ss["Yp_obs_val"]=>vp_obs
-                    )
-                )
-
-            write(summary_writer, summaries, epoch_ii)
-        end
                     
-        #Early stopping
-        if epoch_ii > min_epochs
-            es_loss = early_stopping()
-            if es_loss > prev_es_loss
-                break
-            end
+        if epoch_ii % check_freq == 1            
+            # Early stopping
+            es_loss = early_stopping()           
+            epoch_ii > min_epochs && es_loss > prev_es_loss && break
             prev_es_loss = es_loss
+
+            # Log summary
+            if log_dir!=nothing
+                (hp_obs, sp_obs, vp_obs, terms) = first(batchs)
+                # use the first batch to eval on, the one we trained least recently.  they are shuffled every epoch anyway
+                summaries = run(mdl.sess, mdl.summary,
+                        Dict(
+                            ss["keep_prob"]=>1.0,
+                            ss["terms"]=>terms,
+                            ss["Yp_obs_hue"]=>hp_obs,
+                            ss["Yp_obs_sat"]=>sp_obs,
+                            ss["Yp_obs_val"]=>vp_obs,
+                            ss["early_stopping_loss"] => es_loss
+                        )
+                    )
+                write(summary_writer, summaries, epoch_ii)
+            end
         end
     end
     mdl
@@ -117,7 +131,7 @@ end
 
 
 
-function query(mdl,  input_text, encoding=mdl.encoding, max_tokens=n_steps(mdl))
+function query(mdl::AbstractModelML,  input_text, encoding=mdl.encoding, max_tokens=n_steps(mdl))
     label = input_text
     labels, _ = prepare_labels([label], encoding, do_demacate=false)
 
@@ -141,10 +155,12 @@ function query(mdl,  input_text, encoding=mdl.encoding, max_tokens=n_steps(mdl))
     hp[1,:], sp[1,:], vp[1,:]
 end
             
-evaluate(mdl, testdata::ColorDataset) = evaluate(mdl, testdata.texts, testdata.terms_padded, testdata.colors)
+
+            
+evaluate(mdl::AbstractModelML, testdata::ColorDataset) = evaluate(mdl, testdata.texts, testdata.terms_padded, testdata.colors)
 
 "Run all evalutations, returning a dictionary of results"
-function evaluate(mdl, test_texts, test_terms_padded, test_hsv)
+function evaluate(mdl::AbstractModelML, test_texts, test_terms_padded, test_hsv)
     gg=mdl.sess.graph
 
     Y_obs_hue = test_hsv[:, 1]

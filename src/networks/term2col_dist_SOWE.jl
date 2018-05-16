@@ -8,10 +8,11 @@ const Summaries = TensorFlow.summary
 
 export TermToColorDistributionSOWE
 
-immutable TermToColorDistributionSOWE{OPT, ENC} <: AbstractTermToColorDistributionML
-    enc::ENC
+immutable TermToColorDistributionSOWE{OPT, ENC, SMR} <: AbstractDistEstML
+    encoding::ENC
     sess::Session
     optimizer::OPT
+    summary::SMR
 end
 
 
@@ -78,11 +79,15 @@ function TermToColorDistributionSOWE(enc, word_vecs=rand(300,nlabel(enc))::Abstr
         # Generate some summary operations
         summary_cost = Summaries.scalar("cost", cost)
 #        summary_W1 = Summaries.histogram("W1", W1)
-
+        
+        #External Input for logging
+        early_stopping_loss = placeholder(Float32; shape=[]) 
+        Summaries.scalar("early_stopping_loss", early_stopping_loss; name="summary_early_stopping_loss")
+        summary_op = Summaries.merge_all()
     end
     run(sess, global_variables_initializer())
     sess, optimizer
 
 
-    TermToColorDistributionSOWE(enc, sess, optimizer)
+    TermToColorDistributionSOWE(enc, sess, optimizer, summary_op)
 end
