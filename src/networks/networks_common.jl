@@ -47,12 +47,7 @@ end
 ######### ML methods
 
 abstract type AbstractModelML end
-abstract type AbstractDistEstML <: AbstractModelML  end
-            
-function default_train_kwargs(mdl::AbstractDistEstML, cldata, smoothing)
-    Dict(:early_stopping => () ->evaluate(mdl, cldata.dev)[:perp])
-end
-            
+  
             
 output_res(mdl::AbstractModelML) = TensorFlow.get_shape(mdl.sess.graph["Yp_obs_hue"], 1)
 n_steps(mdl::AbstractModelML) = TensorFlow.get_shape(mdl.sess.graph["terms"], 1)
@@ -180,3 +175,75 @@ function evaluate(mdl::AbstractModelML, test_texts, test_terms_padded, test_hsv)
         mse_to_peak = mse_from_peak([Y_obs_hue Y_obs_sat Y_obs_val], (Yp_hue, Yp_sat, Yp_val))
     end
 end
+
+            
+#######################
+
+            
+function init_ML_network(combine_timesteps, produce_output, word_vecs, n_steps, learning_rate)
+    graph = Graph()
+    sess = Session(graph)
+    @tf begin
+        keep_prob = placeholder(Float32; shape=[])
+        terms = placeholder(Int32; shape=[n_steps, -1])
+
+        emb_table = [zeros(size(word_vecs,1))'; word_vecs'] # add an extra-first row for padding
+        terms_emb = gather(emb_table, terms+1) # move past the first row we added for zeros)
+
+        ######################## THE ADAPTABLE PART###############
+        Z = identity(combine_timesteps(terms_emb, keep_prob))
+        cost = identity(produce_output(Z))
+        ##########################################################
+                    
+        optimizer = train.minimize(train.AdamOptimizer(learning_rate), cost)
+
+        summary_cost = Summaries.scalar("cost", cost)
+#        summary_W1 = Summaries.histogram("W1", W1)
+        
+        #External Input for logging
+        early_stopping_loss = placeholder(Float32; shape=[]) 
+        Summaries.scalar("early_stopping_loss", early_stopping_loss; name="summary_early_stopping_loss")
+        summary_op = Summaries.merge_all()
+    end
+    run(sess, global_variables_initializer())
+    sess, optimizer, summary_op   
+end
+            
+##############################
+            
+abstract type AbstractDistEstML <: AbstractModelML  end
+            
+function default_train_kwargs(mdl::AbstractDistEstML, cldata, smoothing)
+    Dict(:early_stopping => () ->evaluate(mdl, cldata.dev)[:perp])
+end
+          
+function init_dist_est_network(combine_timesteps, word_vecs, n_steps, hidden_layer_size, output_res, learning_rate)
+    function produce_output(Z)
+        @tf begin
+            function declare_output_layer(name)
+                W = get_variable("W_$name", (hidden_layer_size, output_res), Float32)
+                B = get_variable("B_$name", (output_res), Float32)
+                Y_logit = identity(Z*W + B, name="Yp_logit_$name")
+                Y = nn.softmax(Y_logit; name="Yp_$name")
+                Yp_obs = placeholder(Float32; shape=[output_res, -1], name="Yp_obs_$name")'
+                loss = nn.softmax_cross_entropy_with_logits(;labels=Yp_obs, logits=Y_logit, name="loss_$name")
+
+                Summaries.scalar("loss_$name", reduce_mean(loss); name="summary_loss_$name")
+                # Summaries.histogram("W_$name", W; name="summary_W_$name")
+                loss
+            end
+            loss_hue = declare_output_layer("hue")
+            loss_sat = declare_output_layer("sat")
+            loss_val = declare_output_layer("val")
+
+
+            loss_total = reduce_mean(loss_hue + loss_sat + loss_val)
+            loss_total
+        end
+    end
+                
+    init_ML_network(combine_timesteps, produce_output, word_vecs, n_steps, learning_rate)
+end
+            
+            
+#######################

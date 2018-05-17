@@ -1,9 +1,4 @@
-using StatsBase
-using Juno
-
 const Summaries = TensorFlow.summary
-
-export TermToColorDistributionEmpirical, laplace_smooth
 
 mutable struct TermToColorDistributionEmpirical
     encoding::LabelEnc.NativeLabels
@@ -17,7 +12,6 @@ mutable struct TermToColorDistributionEmpirical
 end
 
 output_res(mdl::TermToColorDistributionEmpirical) = mdl.output_res
-
 
 
 function train!(mdl::TermToColorDistributionEmpirical, train_text, train_terms_padded, train_hsvps::NTuple{3})
@@ -63,4 +57,33 @@ function laplace_smooth!(mdl::TermToColorDistributionEmpirical, train_text)
     term2dist= Dict(lbl=>tuple((smooth(ps, lbl) for ps in pss)...) for (lbl, pss) in mdl.term2dist)
     
     mdl
+end
+
+
+######################################################################
+
+
+mutable struct TermToColorDistributionEmpirical
+    encoding::LabelEnc.NativeLabels
+    output_res::Int
+    hsvp::NTuple{3, Array{Float32,2}}
+    function TermToColorDistributionEmpirical(output_res=64)
+        ret = new()
+        ret.output_res = output_res
+        ret
+    end
+end
+
+output_res(mdl::TermToColorDistributionEmpirical) = mdl.output_res
+
+
+function train!(mdl::TermToColorDistributionEmpirical, train_text, train_terms_padded, train_hsvps::NTuple{3})
+    mdl.encoding = labelenc(train_text)
+    mdl.hsvp = train_hsvps
+end
+
+
+function query(mdl::TermToColorDistributionEmpirical,  input_text)
+    ind = convertlabel(LabelEnc.Indices, input_text, mdl.encoding)
+    mdl.hsvp[1][:,ind], mdl.hsvp[2][:, ind], mdl.hsvp[3][:, ind]
 end
