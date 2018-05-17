@@ -63,27 +63,42 @@ end
 ######################################################################
 
 
-mutable struct TermToColorDistributionEmpirical
+mutable struct TermToColorPointEmpirical
     encoding::LabelEnc.NativeLabels
     output_res::Int
-    hsvp::NTuple{3, Array{Float32,2}}
-    function TermToColorDistributionEmpirical(output_res=64)
+    hsv::Array{Float32,2}
+    function TermToColorPointEmpirical(output_res=64)
         ret = new()
         ret.output_res = output_res
         ret
     end
 end
 
-output_res(mdl::TermToColorDistributionEmpirical) = mdl.output_res
+
+function train!(mdl::TermToColorPointEmpirical, train_text, train_terms_padded, train_hsvs::Matrix)
+    grps = collect(groupby(last, enumerate(data.texts)))
+    len = length(grps)
+    
+    texts = Vector{String}(len)
+    hsv = Matrix{Float32}(3, len)
 
 
-function train!(mdl::TermToColorDistributionEmpirical, train_text, train_terms_padded, train_hsvps::NTuple{3})
-    mdl.encoding = labelenc(train_text)
-    mdl.hsvp = train_hsvps
+    for (ii, grp) in enumerate(grps)
+        ind_start, texts[ii] = first(grp)
+        ind_end  = first(last(grp))
+
+        inds = ind_start:ind_end # faster to slice with ranges
+        colors = @view data.colors[inds, :]
+        hsv[:, ii] .= mean(colors, 2)
+    end
+    
+    mdl.encoding = labelenc(texts)
+    mdl.hsvp = hsv
+    mdk
 end
 
 
-function query(mdl::TermToColorDistributionEmpirical,  input_text)
+function query(mdl::TermToColorPointEmpirical,  input_text)
     ind = convertlabel(LabelEnc.Indices, input_text, mdl.encoding)
-    mdl.hsvp[1][:,ind], mdl.hsvp[2][:, ind], mdl.hsvp[3][:, ind]
+    mdl.hsv[:, ind]
 end
