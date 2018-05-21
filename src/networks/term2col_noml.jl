@@ -28,6 +28,7 @@ end
 
 "Run all evalutations, returning a dictionary of results"
 function evaluate(mdl::TermToColorDistributionEmpirical, test_texts, test_terms_padded, test_hsv)
+    N = output_res(mdl)
     Yps = [Matrix{Float32}(length(test_texts), mdl.output_res) for ii in 1:N]
     
     for (term_ii, term) in enumerate(test_terms)
@@ -76,7 +77,7 @@ end
 
 
 function train!(mdl::TermToColorPointEmpirical, train_text, train_terms_padded, train_hsvs::Matrix)
-    grps = collect(groupby(last, enumerate(data.texts)))
+    grps = collect(groupby(last, enumerate(train_text)))
     len = length(grps)
     
     texts = Vector{String}(len)
@@ -88,13 +89,30 @@ function train!(mdl::TermToColorPointEmpirical, train_text, train_terms_padded, 
         ind_end  = first(last(grp))
 
         inds = ind_start:ind_end # faster to slice with ranges
-        colors = @view data.colors[inds, :]
-        hsv[:, ii] .= mean(colors, 2)
+        colors = @view train_hsvs[inds, :]
+        
+        hsv[:, ii] .= hsv_mean(colors)
     end
     
     mdl.encoding = labelenc(texts)
     mdl.hsvp = hsv
-    mdk
+    mdl
+end
+
+"""
+Angularly correct mean of HSV values.
+Not (nesc) perceptual mean.
+"""
+function hsv_mean(colors)
+    hs = @view(colors[:,1])
+    s = mean(@view(colors[:,2]))
+    v = mean(@view(colors[:,3]))
+    
+    ch = mean(cos.(2π*hs))
+    sh = mean(sin.(2π*hs))
+    h = atan2(sh, ch)/2π
+    
+    (h, s, v)
 end
 
 

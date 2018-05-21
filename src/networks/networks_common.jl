@@ -59,7 +59,7 @@ function train!(mdl::AbstractModelML, train_text, train_terms_padded, train_hsvp
                 min_epochs=300,
                 max_epochs=30_000,
                 early_stopping = ()->0.0,
-                check_freq = 50
+                check_freq = 25
                 )
 
     ss = mdl.sess.graph
@@ -152,7 +152,7 @@ end
             
 
             
-evaluate(mdl::AbstractModelML, testdata::ColorDataset) = evaluate(mdl, testdata.texts, testdata.terms_padded, testdata.colors)
+evaluate(mdl, testdata::ColorDataset) = evaluate(mdl, testdata.texts, testdata.terms_padded, testdata.colors)
 
 "Run all evalutations, returning a dictionary of results"
 function evaluate(mdl::AbstractModelML, test_texts, test_terms_padded, test_hsv)
@@ -187,9 +187,8 @@ function init_ML_network(combine_timesteps, produce_output, word_vecs, n_steps, 
         keep_prob = placeholder(Float32; shape=[])
         terms = placeholder(Int32; shape=[n_steps, -1])
 
-        emb_table = [zeros(size(word_vecs,1))'; word_vecs'] # add an extra-first row for padding
+        emb_table = [zeros(Float32, size(word_vecs,1))'; word_vecs'] # add an extra-first row for padding
         terms_emb = gather(emb_table, terms+1) # move past the first row we added for zeros)
-
         ######################## THE ADAPTABLE PART###############
         Z = identity(combine_timesteps(terms_emb, keep_prob))
         cost = identity(produce_output(Z))

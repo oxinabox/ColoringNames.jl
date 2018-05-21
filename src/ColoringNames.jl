@@ -22,7 +22,9 @@ export morpheme_tokenize, rpad_to_matrix, @names_from, prepare_data, prepare_lab
 export descretized_perplexity, find_bin, mse_from_peak, peak, bin_expected_value, total_descretized_logprob
 export load_munroe_data, rare_descriptions, ColorDatasets, ColorDataset, extrapolation_dataset
 export stringify_keys, laplace_smooth
-export TermToColorDistributionSOWE, TermToColorDistributionRNN, TermToColorDistributionEmpirical
+
+export TermToColorDistributionSOWE, TermToColorDistributionRNN, TermToColorDistributionCNN, TermToColorDistributionEmpirical
+
 export find_distributions, load_word2vec_embeddings, load_text_embeddings, load_color_nameset
 export train!, query, evaluate, restore
 export output_res
@@ -46,8 +48,9 @@ include("plot_colors.jl")
 include("evaluation.jl")
 
 include("networks/networks_common.jl")
-include("networks/term2col_dist_noml.jl")
+include("networks/term2col_noml.jl")
 include("networks/term2col_SOWE.jl")
 include("networks/term2col_RNN.jl")
+include("networks/term2col_CNN.jl")
 
 end # module
