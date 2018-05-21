@@ -56,7 +56,7 @@ function train!(mdl::AbstractModelML, train_text, train_terms_padded, train_hsvp
                 log_dir=nothing,
                 batch_size=min(2^14, nobs(train_terms_padded)),
                 dropout_keep_prob=0.5f0,
-                min_epochs=300,
+                min_epochs=0,
                 max_epochs=30_000,
                 early_stopping = ()->0.0,
                 check_freq = 25

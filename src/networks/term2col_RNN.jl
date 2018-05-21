@@ -36,7 +36,7 @@ RNN_combine_terms(hidden_layer_size) = function (terms_emb, keep_prob)
         H = Hs[end]
         
         
-        W1 = get_variable((3*hidden_layer_size, 3hidden_layer_size), Float32)
+        W1 = get_variable((hidden_layer_size, 3hidden_layer_size), Float32)
         B1 = get_variable((3hidden_layer_size), Float32)
         Z1 = nn.dropout(nn.relu(H*W1 + B1), keep_prob)
         
