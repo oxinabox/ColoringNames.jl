@@ -1,14 +1,23 @@
-
-
 "Determine which bin a continous value belongs in"
-function find_bin(value, nbins, range_min=0.0, range_max=1.0)
-    #TODO Check boundries
-    portion = nbins * value/(range_max-range_min)
-
-    clamp.(round.(Int, portion), 1, nbins)
+function find_bin(data::Vector, nbins)
+    midpoints = KernelDensity.kde_range((0,1), nbins)
+    map(data) do x
+        k = searchsortedfirst(midpoints,x)
+        if k==1
+            return 1
+        end
+        below_mp = midpoints[k-1]
+        above_mp = midpoints[k]
+        @assert below_mp ≤ x ≤ above_mp
+        if abs(above_mp-x) < abs(x-below_mp)
+            k #closer to above
+        else
+            k-1 # closer to below
+        end
+    end
 end
 
-function bin_expected_value(bin, nbins) #GOLDPLATE consider non 0-1 range_scale
+function bin_expected_value(bin, nbins)
     bin/nbins - 0.5/nbins
 end
 
@@ -31,7 +40,12 @@ function total_descretized_logprob(obs, predicted_class_probs)
     bin_obs = find_bin(obs, output_res)
     total = 0.0
     for (row, bin) in enumerate(bin_obs)
-        total+=log2(predicted_class_probs[row, bin])
+        pred_prob = predicted_class_probs[row, bin]
+        if pred_prob==0
+            @show row, bin
+            @show pred_prob
+        end
+        total+=log2(pred_prob)
     end
     total
 end

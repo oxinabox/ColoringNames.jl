@@ -27,12 +27,12 @@ function restore(::Type{T}, param_path, model_path=load(param_path,"model_path")
 end
 
 
-
+float_type(mdl)=Float32
+            
 function train!(mdl, cldata::ColorDatasets, smoothing, args...; kwargs...)
-
-    train_text, train_terms_padded, train_hsvps =  find_distributions(cldata.train, output_res(mdl), smoothing)
+    dists =  find_distributions(cldata.train, output_res(mdl), smoothing, float_type(mdl))
     df_kwargs = default_train_kwargs(mdl, cldata, smoothing)
-    train!(mdl, train_text, train_terms_padded, train_hsvps, args...; df_kwargs..., kwargs...)
+    train!(mdl, dists..., args...; df_kwargs..., kwargs...)
 end
             
 function plot_query(mdl, input_data;  kwargs...)

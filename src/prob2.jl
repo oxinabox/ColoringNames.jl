@@ -1,6 +1,6 @@
 find_distributions(data::ColorDataset, nbins, smooth::Bool) = find_distributions(data, nbins, Val{smooth}())
 
-function find_distributions(data::ColorDataset, nbins, smooth::Val)
+function find_distributions(data::ColorDataset, nbins, smooth::Val, T=Float32)
     
     grps = collect(groupby(last, enumerate(data.texts)))
     len = length(grps)
@@ -8,15 +8,15 @@ function find_distributions(data::ColorDataset, nbins, smooth::Val)
 
     texts = Vector{String}(len)
     terms = Matrix{Int}(nsteps, len)
-    hs = Matrix{Float32}(nbins, len)
-    ss = Matrix{Float32}(nbins, len)
-    vs = Matrix{Float32}(nbins, len)
+    hs = Matrix{T}(nbins, len)
+    ss = Matrix{T}(nbins, len)
+    vs = Matrix{T}(nbins, len)
 
     for (ii, grp) in enumerate(grps)
         
         ind_start, texts[ii] = first(grp)
         ind_end  = first(last(grp))
-
+        
         inds = ind_start:ind_end # faster to slice with ranges
         terms[:, ii] = data.terms_padded[:, first(inds)]
         
@@ -30,7 +30,7 @@ function find_distribution(colors::AbstractMatrix, nbins, smooth::Val{false})
     hs = do_not_smooth(@view(colors[:,1]), nbins) |> first
     ss = do_not_smooth(@view(colors[:,2]), nbins) |> first
     vs = do_not_smooth(@view(colors[:,3]), nbins) |> first
-    hs, vs, ss
+    hs, ss, vs
 end
 
 function find_distribution(colors::AbstractMatrix, nbins, smooth::Val{true})
@@ -57,26 +57,24 @@ function truncated_kde_smooth(data, npoints, kde_fun = kde_lscv)
 
     dist = kde_fun(data, npoints=fake_npoints, boundary=fake_boundry)
     density = dist.density
+    
     density./=sum(density)
     inside = density[npoints÷2+1: end - npoints÷2]
+        
     @assert length(inside)==npoints
-    lower = @view density[1:npoints÷2]
-    upper = @view density[end-npoints÷2+1:end]
-    @assert length(lower)==npoints÷2
-    @assert length(upper)==npoints÷2
-    excess_mass = sum(lower) + sum(upper)
+    excess_mass = 1-sum(inside)
     @assert 0<=excess_mass<=0.5 
     inside./= 1-excess_mass
     @assert sum(inside)≈ 1
     inside, dist.x[npoints÷2+1: end - npoints÷2]
 end
 
-function wraparound_kde_smooth(data, npoints)
+function wraparound_kde_smooth(data, npoints, kde_fun = kde_lscv)
     # Because of the periodic nature of FFT used to implement kde
     # It is actually wrap around by default
     # If you specify tight boundries
     boundry = (0, 1)
-    dist = kde_lscv(data, npoints=npoints, boundary=boundry)
+    dist = kde_fun(data, npoints=npoints, boundary=boundry)
     dist.density./=sum(dist.density)
     
     dist.density, dist.x

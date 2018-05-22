@@ -3,8 +3,8 @@ const Summaries = TensorFlow.summary
 mutable struct TermToColorDistributionEmpirical
     encoding::LabelEnc.NativeLabels
     output_res::Int
-    hsvp::NTuple{3, Array{Float32,2}}
-    function TermToColorDistributionEmpirical(output_res=64)
+    hsvp::NTuple{3, Array{Float64,2}}
+    function TermToColorDistributionEmpirical(output_res=256)
         ret = new()
         ret.output_res = output_res
         ret
@@ -13,27 +13,38 @@ end
 
 output_res(mdl::TermToColorDistributionEmpirical) = mdl.output_res
 
-
-function train!(mdl::TermToColorDistributionEmpirical, train_text, train_terms_padded, train_hsvps::NTuple{3})
+float_type(mdl::TermToColorDistributionEmpirical) = Float64
+function train!(mdl::TermToColorDistributionEmpirical, train_text, train_terms_padded, train_hsvps::NTuple{3};
+    remove_zeros_hack = true
+    )
     mdl.encoding = labelenc(train_text)
     mdl.hsvp = train_hsvps
+    if remove_zeros_hack
+        # Adding eps to every single probability technically breaks probability
+        # by causing the estimates to not sum to 1
+        # But it is by an amount that is smaller than the that caused by using Float32s
+        # In the outputs of the other models.
+        mdl.hsvp[1].+=eps()
+        mdl.hsvp[2].+=eps()
+        mdl.hsvp[3].+=eps()
+    end
+    mdl
 end
 
 
 function query(mdl::TermToColorDistributionEmpirical,  input_text)
-    ind = convertlabel(LabelEnc.Indices, input_text, mdl.encoding)
+    ind = convertlabel(LabelEnc.Indices, String(input_text), mdl.encoding)
     mdl.hsvp[1][:,ind], mdl.hsvp[2][:, ind], mdl.hsvp[3][:, ind]
 end
 
 
 "Run all evalutations, returning a dictionary of results"
 function evaluate(mdl::TermToColorDistributionEmpirical, test_texts, test_terms_padded, test_hsv)
-    N = output_res(mdl)
-    Yps = [Matrix{Float32}(length(test_texts), mdl.output_res) for ii in 1:N]
+    Yps = [Matrix{Float32}(length(test_texts), mdl.output_res) for ii in 1:3]
     
-    for (term_ii, term) in enumerate(test_terms)
-        for (dist_ii, ps) in enumerate(query(mdl, term))
-            Yps[dist_ii][term_ii, :] = ps'
+    for (text_ii, text) in enumerate(test_texts)
+        for (channel_ii, ps) in enumerate(query(mdl, text))
+            Yps[channel_ii][text_ii, :] = ps'
         end
     end
 
@@ -47,18 +58,6 @@ function evaluate(mdl::TermToColorDistributionEmpirical, test_texts, test_terms_
     end
 end
 
-
-function laplace_smooth!(mdl::TermToColorDistributionEmpirical, train_text)
-    lblfreqs = Dict(lbl=>length(inds) for (lbl, inds) in labelmap(train_text))
-    
-    function smooth(ps, lbl)
-        counts = ps*lblfreqs[lbl]
-        (counts.+1)./(sum(counts.+1))
-    end
-    term2dist= Dict(lbl=>tuple((smooth(ps, lbl) for ps in pss)...) for (lbl, pss) in mdl.term2dist)
-    
-    mdl
-end
 
 
 ######################################################################
