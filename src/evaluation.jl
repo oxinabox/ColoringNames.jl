@@ -1,5 +1,5 @@
 "Determine which bin a continous value belongs in"
-function find_bin(data::Vector, nbins)
+function find_bin(data::AbstractVector, nbins)
     midpoints = KernelDensity.kde_range((0,1), nbins)
     map(data) do x
         k = searchsortedfirst(midpoints,x)
@@ -18,7 +18,8 @@ function find_bin(data::Vector, nbins)
 end
 
 function bin_expected_value(bin, nbins)
-    bin/nbins - 0.5/nbins
+    midpoints = KernelDensity.kde_range((0,1), nbins)
+    midpoints[bin]
 end
 
 
@@ -66,12 +67,32 @@ end
 peak(predicted_class_probs::AbstractMatrix) = mapslices(peak, predicted_class_probs, 2)
 
 "Mean squared error"
-function mse(obs, preds)
-    mean(sum(abs2.(preds.-obs), 2))
+function mse(obs, pred)
+    mean(hsv_squared_error(pred, obs))
 end
 
 function mse_from_peak{T<:AbstractMatrix}(obs::AbstractMatrix, predicted_class_probs::NTuple{3, T})
     preds = reduce(hcat, peak.(predicted_class_probs))
     @assert size(preds, 1) == size(obs,1) "$(size(preds,1)) != $(size(obs,1))"
     mse(obs, preds)
+end
+
+
+hsquared_error(ha::Vector, hb::Vector) = @. min((ha - hb)^2, (ha - hb - 1)^2)
+hsquared_error(ha, hb) = min((ha - hb)^2, (ha - hb - 1)^2)
+
+squared_error(a::Vector, b::Vector) = @. (a-b)^2
+squared_error(a, b) = (a-b)^2
+
+
+function hsv_squared_error(aa, bb)
+    ha = aa[:, 1]
+    sa = aa[:, 2]
+    va = aa[:, 3]
+
+    hb = bb[:, 1]
+    sb = bb[:, 2]
+    vb = bb[:, 3]
+    
+    hsquared_error(ha, hb) + squared_error(sa, sb) + squared_error(va, vb)
 end

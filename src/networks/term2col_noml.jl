@@ -1,6 +1,6 @@
 const Summaries = TensorFlow.summary
 
-mutable struct TermToColorDistributionEmpirical
+mutable struct TermToColorDistributionEmpirical <: AbstractDistEstModel
     encoding::LabelEnc.NativeLabels
     output_res::Int
     hsvp::NTuple{3, Array{Float64,2}}
@@ -32,18 +32,20 @@ function train!(mdl::TermToColorDistributionEmpirical, train_text, train_terms_p
 end
 
 
-function query(mdl::TermToColorDistributionEmpirical,  input_text)
-    ind = convertlabel(LabelEnc.Indices, String(input_text), mdl.encoding)
+function query(mdl::TermToColorDistributionEmpirical,  input_texts::Vector, args...)
+    ind = convertlabel(LabelEnc.Indices, String.(input_texts), mdl.encoding)
     mdl.hsvp[1][:,ind], mdl.hsvp[2][:, ind], mdl.hsvp[3][:, ind]
 end
 
-
+#=
 "Run all evalutations, returning a dictionary of results"
 function evaluate(mdl::TermToColorDistributionEmpirical, test_texts, test_terms_padded, test_hsv)
-    Yps = [Matrix{Float32}(length(test_texts), mdl.output_res) for ii in 1:3]
+    Yps = query(mdl, test_texts)
+    
+    [Matrix{Float32}(length(test_texts), mdl.output_res) for ii in 1:3]
     
     for (text_ii, text) in enumerate(test_texts)
-        for (channel_ii, ps) in enumerate(query(mdl, text))
+        for (channel_ii, ps) in enumerate()
             Yps[channel_ii][text_ii, :] = ps'
         end
     end
@@ -58,20 +60,15 @@ function evaluate(mdl::TermToColorDistributionEmpirical, test_texts, test_terms_
     end
 end
 
-
+=#
 
 ######################################################################
 
 
-mutable struct TermToColorPointEmpirical
+mutable struct TermToColorPointEmpirical <: AbstractPointEstModel
     encoding::LabelEnc.NativeLabels
-    output_res::Int
     hsv::Array{Float32,2}
-    function TermToColorPointEmpirical(output_res=64)
-        ret = new()
-        ret.output_res = output_res
-        ret
-    end
+    TermToColorPointEmpirical() = new()
 end
 
 
@@ -94,7 +91,7 @@ function train!(mdl::TermToColorPointEmpirical, train_text, train_terms_padded, 
     end
     
     mdl.encoding = labelenc(texts)
-    mdl.hsvp = hsv
+    mdl.hsv = hsv
     mdl
 end
 
@@ -109,7 +106,7 @@ function hsv_mean(colors)
     
     ch = mean(cos.(2π*hs))
     sh = mean(sin.(2π*hs))
-    h = atan2(sh, ch)/2π
+    h = mod(atan2(sh, ch), 2π)/2π
     
     (h, s, v)
 end

@@ -37,7 +37,7 @@ function find_distribution(colors::AbstractMatrix, nbins, smooth::Val{true})
     hs = wraparound_kde_smooth((@view colors[:,1]), nbins) |> first
     ss = truncated_kde_smooth((@view colors[:,2]), nbins) |> first
     vs = truncated_kde_smooth((@view colors[:,3]), nbins) |> first
-    hs, vs, ss
+    hs, ss, vs
 end
 
 

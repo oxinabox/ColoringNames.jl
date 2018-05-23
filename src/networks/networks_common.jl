@@ -1,4 +1,9 @@
+abstract type AbstractDistEstModel end
+abstract type AbstractPointEstModel end
 
+abstract type AbstractDistEstML  <: AbstractDistEstModel end
+abstract type AbstractPointEstML <: AbstractPointEstModel end
+const AbstractModelML = Union{AbstractDistEstML, AbstractPointEstML}
 
 
 
@@ -28,31 +33,67 @@ end
 
 
 float_type(mdl)=Float32
-            
+
+function train!(mdl, cldata::ColorDatasets, args...; kwargs...)
+    df_kwargs = default_train_kwargs(mdl, cldata,  args...)
+    data = (cldata.train.texts, cldata.train.terms_padded, cldata.train.colors)
+    train!(mdl, data..., args...; df_kwargs..., kwargs...)
+end
+                
 function train!(mdl, cldata::ColorDatasets, smoothing, args...; kwargs...)
     dists =  find_distributions(cldata.train, output_res(mdl), smoothing, float_type(mdl))
-    df_kwargs = default_train_kwargs(mdl, cldata, smoothing)
+    df_kwargs = default_train_kwargs(mdl, cldata, smoothing, args...)
     train!(mdl, dists..., args...; df_kwargs..., kwargs...)
 end
             
-function plot_query(mdl, input_data;  kwargs...)
-    plot_hsv(query(mdl, input_data)...; title=input_data)              
-end
-            
 
-function default_train_kwargs(mdl, cldata, smoothing)
+
+
+function default_train_kwargs(mdl, cldata, args...)
     Dict()
 end
             
-######### ML methods
+evaluate(mdl, testdata::ColorDataset) = evaluate(mdl, testdata.texts, testdata.terms_padded, testdata.colors)
 
-abstract type AbstractModelML end
-  
+
+
+"Run all evalutations, returning a dictionary of results"
+function evaluate(mdl::AbstractDistEstModel, test_texts, test_terms_padded, test_hsv)
+                
+    Y_obs_hue = @view(test_hsv[:, 1])
+    Y_obs_sat = @view(test_hsv[:, 2])
+    Y_obs_val = @view(test_hsv[:, 3])
+
+    Yp_hue, Yp_sat, Yp_val = query(mdl, test_texts)
+
+    @names_from begin
+        perp_hue = descretized_perplexity(Y_obs_hue, Yp_hue')
+        perp_sat = descretized_perplexity(Y_obs_sat, Yp_sat')
+        perp_val = descretized_perplexity(Y_obs_val, Yp_val')
+        perp = geomean([perp_hue perp_sat perp_val])
+
+        mse_to_peak = mse_from_peak([Y_obs_hue Y_obs_sat Y_obs_val], (Yp_hue', Yp_sat', Yp_val'))
+    end
+end
+
             
-output_res(mdl::AbstractModelML) = TensorFlow.get_shape(mdl.sess.graph["Yp_obs_hue"], 1)
-n_steps(mdl::AbstractModelML) = TensorFlow.get_shape(mdl.sess.graph["terms"], 1)
+function evaluate(mdl::AbstractPointEstModel, texts, terms_padded, reference_colors)
+    hp, sp, vp = query(mdl, texts)
+    mse_from_peak(reference_colors, (hp', sp', vp'))
+end
 
-function train!(mdl::AbstractModelML, train_text, train_terms_padded, train_hsvps::NTuple{3};
+            
+function query(mdl, input_text)
+    hp, sp, vp = query(mdl,  [input_text])
+    hp[:, 1], sp[:, 1], vp[:, 1]
+end
+
+            
+######### AbstractDistEstML methods           
+output_res(mdl::AbstractDistEstML) = TensorFlow.get_shape(mdl.sess.graph["Yp_obs_hue"], 1)
+n_steps(mdl::AbstractDistEstML) = TensorFlow.get_shape(mdl.sess.graph["terms"], 1)
+
+function train!(mdl::AbstractDistEstML, train_text, train_terms_padded, train_hsvps::NTuple{3};
                 log_dir=nothing,
                 batch_size=min(2^14, nobs(train_terms_padded)),
                 dropout_keep_prob=0.5f0,
@@ -125,14 +166,16 @@ function train!(mdl::AbstractModelML, train_text, train_terms_padded, train_hsvp
 end
 
 
+            
 
-function query(mdl::AbstractModelML,  input_text, encoding=mdl.encoding, max_tokens=n_steps(mdl))
-    label = input_text
-    labels, _ = prepare_labels([label], encoding, do_demacate=false)
+function query(mdl::AbstractDistEstML,  input_texts::Vector)
+    encoding=mdl.encoding
+    max_tokens=n_steps(mdl)
+                
+    labels, _ = prepare_labels(input_texts, encoding, do_demacate=false)
 
     nsteps_to_pad = max(max_tokens - size(labels,1), 0)
-
-    padded_labels = [labels; zeros(Int, nsteps_to_pad)]
+    padded_labels = [labels; zeros(Int, (nsteps_to_pad, length(input_texts)))]
     ss=mdl.sess.graph
     hp, sp, vp = run(
         mdl.sess,
@@ -146,35 +189,11 @@ function query(mdl::AbstractModelML,  input_text, encoding=mdl.encoding, max_tok
             ss["terms"]=>padded_labels,
         )
     )
-
-    hp[1,:], sp[1,:], vp[1,:]
+    hp', sp', vp'
 end
             
 
             
-evaluate(mdl, testdata::ColorDataset) = evaluate(mdl, testdata.texts, testdata.terms_padded, testdata.colors)
-
-"Run all evalutations, returning a dictionary of results"
-function evaluate(mdl::AbstractModelML, test_texts, test_terms_padded, test_hsv)
-    gg=mdl.sess.graph
-
-    Y_obs_hue = test_hsv[:, 1]
-    Y_obs_sat = test_hsv[:, 2]
-    Y_obs_val = test_hsv[:, 3]
-
-    Yp_hue, Yp_sat, Yp_val = run(mdl.sess,
-                                 [gg["Yp_hue"], gg["Yp_sat"], gg["Yp_val"]],
-                                 Dict(gg["terms"]=>test_terms_padded, gg["keep_prob"]=>1.0))
-
-    @names_from begin
-        perp_hue = descretized_perplexity(Y_obs_hue, Yp_hue)
-        perp_sat = descretized_perplexity(Y_obs_sat, Yp_sat)
-        perp_val = descretized_perplexity(Y_obs_val, Yp_val)
-        perp = geomean([perp_hue perp_sat perp_val])
-
-        mse_to_peak = mse_from_peak([Y_obs_hue Y_obs_sat Y_obs_val], (Yp_hue, Yp_sat, Yp_val))
-    end
-end
 
             
 #######################
@@ -210,9 +229,9 @@ end
             
 ##############################
             
-abstract type AbstractDistEstML <: AbstractModelML  end
+
             
-function default_train_kwargs(mdl::AbstractDistEstML, cldata, smoothing)
+function default_train_kwargs(mdl::AbstractDistEstML, cldata, args...)
     Dict(:early_stopping => () ->evaluate(mdl, cldata.dev)[:perp])
 end
           

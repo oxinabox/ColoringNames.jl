@@ -30,3 +30,22 @@ end
     @test peak(three127) == reshape([5/6; 5/6; 5/6], (3,1))
 
 end
+
+
+using TensorFlow
+using ColoringNames: hsquared_error, hsv_squared_error
+@testset "hsquared_error" begin
+    @test hsquared_error([0.9, 0.9], [0.9, 0.9]) == [0,0]
+    @test ≈(hsquared_error([0.9, 0.9], [0.7,0.1])...)
+end
+
+
+@testset "hsv_squared_error" begin
+    sess = Session(Graph())
+
+    a= rand(50,3)
+    b = rand(50,3)
+    jl_err = hsv_squared_error(a,b)
+    tf_err = run(sess, hsv_squared_error(Tensor(a), Tensor(b)))
+    @test jl_err==tf_err
+end
