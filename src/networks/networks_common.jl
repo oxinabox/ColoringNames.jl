@@ -78,8 +78,10 @@ end
 
             
 function evaluate(mdl::AbstractPointEstModel, texts, terms_padded, reference_colors)
-    hp, sp, vp = query(mdl, texts)
-    mse_from_peak(reference_colors, (hp', sp', vp'))
+    preds = query(mdl, texts)'
+    @assert(size(reference_colors) == size(preds), "$(size(reference_colors)) != $(size(preds))")
+    @assert size(preds,2) == 3
+    mse(reference_colors, preds)
 end
 
             
@@ -88,10 +90,30 @@ function query(mdl, input_text)
     hp[:, 1], sp[:, 1], vp[:, 1]
 end
 
+function query(mdl, input_texts::Vector) 
+                #should overload this or else will get overflows
+    throw(MethodError(query, (typeof(mdl), typeof(input_texts))))
+end
+#######################################
+# AbstractML
+             
+function query(mdl::AbstractModelML, input_texts::Vector) 
+                #should overload this or else will get overflows
+    encoding=mdl.encoding
+    max_tokens=n_steps(mdl)
+                
+    labels, _ = prepare_labels(input_texts, encoding, do_demacate=false)
+
+    nsteps_to_pad = max(max_tokens - size(labels,1), 0)
+    padded_labels = [labels; zeros(Int, (nsteps_to_pad, length(input_texts)))]
+    _query(mdl, padded_labels)
+end
+
+n_steps(mdl::AbstractModelML) = TensorFlow.get_shape(mdl.sess.graph["terms"], 1)
             
 ######### AbstractDistEstML methods           
 output_res(mdl::AbstractDistEstML) = TensorFlow.get_shape(mdl.sess.graph["Yp_obs_hue"], 1)
-n_steps(mdl::AbstractDistEstML) = TensorFlow.get_shape(mdl.sess.graph["terms"], 1)
+
 
 function train!(mdl::AbstractDistEstML, train_text, train_terms_padded, train_hsvps::NTuple{3};
                 log_dir=nothing,
@@ -167,15 +189,8 @@ end
 
 
             
-
-function query(mdl::AbstractDistEstML,  input_texts::Vector)
-    encoding=mdl.encoding
-    max_tokens=n_steps(mdl)
-                
-    labels, _ = prepare_labels(input_texts, encoding, do_demacate=false)
-
-    nsteps_to_pad = max(max_tokens - size(labels,1), 0)
-    padded_labels = [labels; zeros(Int, (nsteps_to_pad, length(input_texts)))]
+"Inner functon for query"
+function _query(mdl::AbstractDistEstML,  padded_labels::Matrix)
     ss=mdl.sess.graph
     hp, sp, vp = run(
         mdl.sess,
@@ -228,7 +243,7 @@ function init_ML_network(combine_timesteps, produce_output, word_vecs, n_steps, 
 end
             
 ##############################
-            
+# Dist Est ML            
 
             
 function default_train_kwargs(mdl::AbstractDistEstML, cldata, args...)
@@ -265,3 +280,57 @@ end
             
             
 #######################
+# Point Est network ]) end
+            
+            
+            
+function default_train_kwargs(mdl::AbstractPointEstML, cldata, args...)
+    Dict(:early_stopping => () ->evaluate(mdl, cldata.dev))
+end
+          
+function init_point_est_network(combine_timesteps, word_vecs, n_steps, hidden_layer_size, learning_rate)
+    function produce_output(Z)
+        @tf begin
+            #=    
+                Y_logit = identity(Z*W + B, name="Yp_logit_$name")
+                Y = nn.softmax(Y_logit; name="Yp_$name")
+                Yp_obs = placeholder(Float32; shape=[output_res, -1], name="Yp_obs_$name")'
+                loss = nn.softmax_cross_entropy_with_logits(;labels=Yp_obs, logits=Y_logit, name="loss_$name")
+
+                Summaries.scalar("loss_$name", reduce_mean(loss); name="summary_loss_$name")
+                # Summaries.histogram("W_$name", W; name="summary_W_$name")
+                loss
+                        end =#
+            Wo = get_variable((hidden_layer_size, 4), Float32)
+            bo = get_variable(4, Float32)
+            Y_logit = identity(Z*Wo + bo)
+            Y_hue = atan2(Y_logit[:,1],Y_logit[:,2])/(2Float32(π))
+            Y_sat = nn.sigmoid(Y_logit[:,3])
+            Y_val = nn.sigmoid(Y_logit[:,4])
+            Y = identity([Y_hue Y_sat Y_val])
+            @show Y
+            
+            Y_obs = placeholder(Float32; shape=[-1 ,3])
+            loss_total = mse(Y, Y_obs)
+            @show loss_total
+            loss_total
+        end
+    end
+                
+    init_ML_network(combine_timesteps, produce_output, word_vecs, n_steps, learning_rate)
+end
+            
+            
+            
+function _query(mdl::AbstractPointEstML,  padded_labels::Matrix)
+    ss=mdl.sess.graph
+    hsv = run(
+        mdl.sess,
+        ss["Y"],
+        Dict(
+            ss["keep_prob"]=>1.0f0,
+            ss["terms"]=>padded_labels,
+        )
+    )
+    hsv'
+end

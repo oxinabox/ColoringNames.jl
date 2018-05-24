@@ -6,13 +6,13 @@ function Base.Math.atan2{T1,T2}(y::Tensor{T1}, x::Tensor{T2}, ϵ=1.0e-12)
         v1 = v0 + one(T2)
 
         # Add a small number to all zeros, to avoid division by zero:
-        x = select(x .== v0, x+convert(T1, ϵ), x)
-        y = select(y .== v0, y+convert(T1, ϵ), y)
+        x = select(equal(x,v0), x+convert(T1, ϵ), x)
+        y = select(equal(y,v0), y+convert(T2, ϵ), y)
 
-
+        
         Θ = atan(y/x) #This will be kept if x>0
-        Θ = Θ + select((x<v0) & (y>v0), π.*v1, v0)
-        Θ = Θ - select((x<v0) & (y<v0), π.*v1, v0)
+        Θ = Θ + select((x<v0) & (y>v0), T2(π).*v1, v0)
+        Θ = Θ - select((x<v0) & (y<v0), T2(π).*v1, v0)
         Θ
     end
 end

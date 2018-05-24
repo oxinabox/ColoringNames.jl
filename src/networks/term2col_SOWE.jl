@@ -49,3 +49,25 @@ function TermToColorDistributionSOWE(enc, word_vecs=rand(300,nlabel(enc))::Abstr
    
     TermToColorDistributionSOWE(enc, sess, optimizer, summary_op)
 end
+
+#########################
+immutable TermToColorPointSOWE{OPT, ENC, SMR} <: AbstractPointEstML
+    encoding::ENC
+    sess::Session
+    optimizer::OPT
+    summary::SMR
+end
+
+function TermToColorPointSOWE(enc, word_vecs=rand(300,nlabel(enc))::AbstractMatrix;
+                                     hidden_layer_size=size(word_vecs,1),
+                                     n_steps=-1,
+                                     learning_rate=0.001
+)
+    sess, optimizer, summary_op = init_point_est_network(
+        SOWE_combine_terms(hidden_layer_size),
+        word_vecs, n_steps, hidden_layer_size, learning_rate
+        )
+   
+    TermToColorPointSOWE(enc, sess, optimizer, summary_op)
+end
+
