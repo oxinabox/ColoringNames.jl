@@ -44,7 +44,8 @@ end
 ## Smoothers 
 
 function do_not_smooth(data, npoints)
-    midpoints = KernelDensity.kde_range((0,1), npoints)
+    # Lower boundary of -eps() to include lower boundry
+    midpoints = KernelDensity.kde_range((-eps(),1), npoints) 
     dist = KernelDensity.tabulate(data, midpoints)
     dist.density./=sum(dist.density)
     dist.density, dist.x
@@ -73,7 +74,9 @@ function wraparound_kde_smooth(data, npoints, kde_fun = kde_lscv)
     # Because of the periodic nature of FFT used to implement kde
     # It is actually wrap around by default
     # If you specify tight boundries
-    boundry = (0, 1)
+    
+    # Lower boundary of -eps() to include lower boundry
+    boundry = (-eps(), 1)
     dist = kde_fun(data, npoints=npoints, boundary=boundry)
     dist.density./=sum(dist.density)
     

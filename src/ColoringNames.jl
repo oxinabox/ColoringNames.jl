@@ -1,8 +1,10 @@
-__precompile__(true)
+__precompile__(false)
 module ColoringNames
+using TensorFlow
+import_op("Atan2")
+
 using IterTools
 using Memoize
-using TensorFlow
 using StatsBase
 using DataDeps
 import Juno: @progress

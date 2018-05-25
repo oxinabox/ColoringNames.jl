@@ -112,7 +112,7 @@ function hsv_mean(colors)
 end
 
 
-function query(mdl::TermToColorPointEmpirical,  input_text)
-    ind = convertlabel(LabelEnc.Indices, input_text, mdl.encoding)
+function query(mdl::TermToColorPointEmpirical,  input_text::Vector)
+    ind = convertlabel(LabelEnc.Indices, String.(input_text), mdl.encoding)
     mdl.hsv[:, ind]
 end

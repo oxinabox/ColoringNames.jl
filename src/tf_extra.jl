@@ -1,4 +1,5 @@
 
+#=
 function Base.Math.atan2{T1,T2}(y::Tensor{T1}, x::Tensor{T2}, ϵ=1.0e-12)
     TensorFlow.with_op_name("ATan2") do
         #Hack to generate correctly typed and sized 0s and 1s
@@ -17,3 +18,4 @@ function Base.Math.atan2{T1,T2}(y::Tensor{T1}, x::Tensor{T2}, ϵ=1.0e-12)
     end
 end
 
+=#
