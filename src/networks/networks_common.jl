@@ -63,16 +63,18 @@ function evaluate(mdl::AbstractDistEstModel, test_texts, test_terms_padded, test
     Y_obs_hue = @view(test_hsv[:, 1])
     Y_obs_sat = @view(test_hsv[:, 2])
     Y_obs_val = @view(test_hsv[:, 3])
-
-    Yp_hue, Yp_sat, Yp_val = query(mdl, test_texts)
+    Y_obs = [Y_obs_hue Y_obs_sat Y_obs_val]
+                
+    Yp_hue, Yp_sat, Yp_val = map(transpose, query(mdl, test_texts))
 
     @names_from begin
-        perp_hue = descretized_perplexity(Y_obs_hue, Yp_hue')
-        perp_sat = descretized_perplexity(Y_obs_sat, Yp_sat')
-        perp_val = descretized_perplexity(Y_obs_val, Yp_val')
+        perp_hue = descretized_perplexity(Y_obs_hue, Yp_hue)
+        perp_sat = descretized_perplexity(Y_obs_sat, Yp_sat)
+        perp_val = descretized_perplexity(Y_obs_val, Yp_val)
         perp = geomean([perp_hue perp_sat perp_val])
 
-        mse_to_peak = mse_from_peak([Y_obs_hue Y_obs_sat Y_obs_val], (Yp_hue', Yp_sat', Yp_val'))
+        mse_to_distmode = mse_from_peak(Y_obs, (Yp_hue, Yp_sat, Yp_val))
+        mse_to_distmean = mse_from_distmean(Y_obs, (Yp_hue, Yp_sat, Yp_val))
     end
 end
 
@@ -137,13 +139,8 @@ function _train!(obs_input_func::Function, mdl, all_obs;
 
         # Setup Batches
         data = shuffleobs(all_obs, obsdims)
-        batchs = eachbatch(data; obsdim=obsdims, maxsize=batch_size)
-        true_batch_size = floor(nobs(data, obsdims)/length(batchs))
-        if true_batch_size < 0.5*batch_size
-            warn("Batch size is only $(true_batch_size)")
-        end
-
-        
+        batchs = eachbatch(data; obsdim=obsdims, size=batch_size)
+                
         # Each Batch
         for batch in batchs
             run(
@@ -159,7 +156,8 @@ function _train!(obs_input_func::Function, mdl, all_obs;
                     
         if epoch_ii % check_freq == 1 
             # Early stopping
-            es_loss = early_stopping()           
+            es_loss = early_stopping()
+            @show es_loss
             epoch_ii > min_epochs && es_loss > prev_es_loss && break
             prev_es_loss = es_loss
 
@@ -323,10 +321,12 @@ function init_point_est_network(combine_timesteps, word_vecs, n_steps, hidden_la
             Y_sat = nn.sigmoid(Y_logit[:,3])
             Y_val = nn.sigmoid(Y_logit[:,4])
             
-            Y_hue_o = Ops.atan2(Y_logit[:,1],Y_logit[:,2])/(2Float32(π))
-            Y_hue = reshape(Y_hue_o, size(Y_sat)) # for some reason atan2 comes out wrong shape
+            Y_hue_o1 = Ops.atan2(Y_logit[:,1],Y_logit[:,2])/(2Float32(π))
+            Y_hue_o2 = select(Y_hue_o1 > 0, Y_hue_o1, Y_hue_o1+1) # Wrap around things below 0
+            Y_hue = reshape(Y_hue_o2, [-1]) # force shape
             
             Y = identity([Y_hue Y_sat Y_val])
+            
       
             Y_obs = placeholder(Float32; shape=[-1 ,3])
             loss_total = mse(Y, Y_obs)

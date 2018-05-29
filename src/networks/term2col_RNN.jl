@@ -23,17 +23,17 @@ RNN_combine_terms(hidden_layer_size) = function (terms_emb, keep_prob)
     end
     
     @tf begin
-        #0 is the min term
-        # indmin finds its index
-        # We include it in ther terms, as it serves as a demarcation pseudotoken
-        # spo the network knows where it ends
+        # 0 is the min term, indmin finds its index
+        # We include that index in the terms, as it serves as a demarcation pseudotoken
+        # so the network knows where it ends
         # This marginally improves results
-        term_lengths = indmin(terms_emb, 1)[:, 1]# intentionally wrong
+        term_lengths = indmin(terms_emb, 1)[:, 1]
 
         cell = nn.rnn_cell.DropoutWrapper(nn.rnn_cell.BasicRNNCell(hidden_layer_size), keep_prob)
         
         Hs, state = nn.rnn(cell, terms_emb, term_lengths; dtype=Float32, time_major=true)
-        H = Hs[end]
+        Ho = Hs[end]      
+        H = reshape(Ho, [-1, hidden_layer_size]) #Force shape
         
         
         W1 = get_variable((hidden_layer_size, 3hidden_layer_size), Float32)
@@ -62,3 +62,27 @@ function TermToColorDistributionRNN(enc, word_vecs=rand(300,nlabel(enc))::Abstra
    
     TermToColorDistributionRNN(enc, sess, optimizer, summary_op)
 end
+
+
+##############################################
+
+immutable TermToColorPointRNN{OPT, ENC, SMR} <: AbstractPointEstML
+    encoding::ENC
+    sess::Session
+    optimizer::OPT
+    summary::SMR
+end
+
+function TermToColorPointRNN(enc, word_vecs=rand(300,nlabel(enc))::AbstractMatrix;
+                                     hidden_layer_size=size(word_vecs,1),
+                                     n_steps=-1,
+                                     learning_rate=0.001
+)
+    sess, optimizer, summary_op = init_point_est_network(
+        RNN_combine_terms(hidden_layer_size),
+        word_vecs, n_steps, hidden_layer_size, learning_rate
+        )
+   
+    TermToColorPointRNN(enc, sess, optimizer, summary_op)
+end
+

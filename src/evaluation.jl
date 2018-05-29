@@ -52,8 +52,11 @@ function total_descretized_logprob(obs, predicted_class_probs)
 end
 
 
+###########################################
+# Peak /Mode
 
 """
+The distribiutions mode
 For `predicted_class_probs` the predictions of probability for each bin.
 Finds the bin with the highest probability, and determines the value in continous space for that value
 """
@@ -66,10 +69,8 @@ end
 
 peak(predicted_class_probs::AbstractMatrix) = mapslices(peak, predicted_class_probs, 2)
 
-"Mean squared error"
-function mse(obs, pred)
-    mean(hsv_squared_error(pred, obs))
-end
+
+
 
 function mse_from_peak{T<:AbstractMatrix}(obs::AbstractMatrix, predicted_class_probs::NTuple{3, T})
     preds = reduce(hcat, peak.(predicted_class_probs))
@@ -77,11 +78,54 @@ function mse_from_peak{T<:AbstractMatrix}(obs::AbstractMatrix, predicted_class_p
     mse(obs, preds)
 end
 
+#######################################################
+# Weight Mean
 
-hsquared_error(ha::Vector, hb::Vector) = @. min((ha - hb)^2, (ha - hb - 1)^2)
+function weighted_bin_mean(bin_weights::AbstractVector)
+    @assert(all(0 .<= bin_weights .<= 1))
+    nbins = length(bin_weights)
+    midpoints = KernelDensity.kde_range((0,1), nbins)
+    (midpoints ⋅ bin_weights)
+end
+
+function weighted_bin_mean_hue(bin_weights::AbstractVector)
+    @assert(all(0 .<= bin_weights .<= 1))
+    nbins = length(bin_weights)
+    midpoints = KernelDensity.kde_range((0,1), nbins)
+    
+    c_midpoints = cos.(2π.*midpoints)
+    c_mean =  (c_midpoints ⋅ bin_weights)
+
+    s_midpoints = sin.(2π.*midpoints)
+    s_mean =  (s_midpoints ⋅ bin_weights)
+    
+    mod(atan2(s_mean, c_mean), 2π)/2π
+end
+
+function distmean(hp::AbstractMatrix, sp::AbstractMatrix, vp::AbstractMatrix)
+    hcat(
+        mapslices(weighted_bin_mean_hue, hp, 2),
+        mapslices(weighted_bin_mean, sp, 2),
+        mapslices(weighted_bin_mean, vp, 2)
+    )
+end
+function mse_from_distmean{T<:AbstractMatrix}(obs::AbstractMatrix, predicted_class_probs::NTuple{3, T})
+    preds = distmean(predicted_class_probs...)
+    @assert size(preds, 1) == size(obs,1) "$(size(preds,1)) != $(size(obs,1))"
+    mse(obs, preds)
+end
+
+#############
+
+"Mean squared error"
+function mse(obs, pred)
+    mean(hsv_squared_error(pred, obs))
+end
+
+hsquared_error(ha::AbstractVector, hb::AbstractVector) = @. min((ha - hb)^2, (ha - hb - 1)^2)
 hsquared_error(ha, hb) = min((ha - hb)^2, (ha - hb - 1)^2)
 
-squared_error(a::Vector, b::Vector) = @. (a-b)^2
+squared_error(a::AbstractVector, b::AbstractVector) = @. (a-b)^2
 squared_error(a, b) = (a-b)^2
 
 

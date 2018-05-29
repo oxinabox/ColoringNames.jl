@@ -1,4 +1,4 @@
-
+#=
 
 
 export gaussianhot, gaussianhot!,
@@ -116,3 +116,5 @@ function splay_probabilities!(hp,sp,vp, hsv; stddev=1/size(hp,1))
     end
     (hp, sp, vp)
 end
+
+=#

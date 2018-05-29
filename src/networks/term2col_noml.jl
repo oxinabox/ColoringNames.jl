@@ -37,30 +37,6 @@ function query(mdl::TermToColorDistributionEmpirical,  input_texts::Vector, args
     mdl.hsvp[1][:,ind], mdl.hsvp[2][:, ind], mdl.hsvp[3][:, ind]
 end
 
-#=
-"Run all evalutations, returning a dictionary of results"
-function evaluate(mdl::TermToColorDistributionEmpirical, test_texts, test_terms_padded, test_hsv)
-    Yps = query(mdl, test_texts)
-    
-    [Matrix{Float32}(length(test_texts), mdl.output_res) for ii in 1:3]
-    
-    for (text_ii, text) in enumerate(test_texts)
-        for (channel_ii, ps) in enumerate()
-            Yps[channel_ii][text_ii, :] = ps'
-        end
-    end
-
-    @names_from begin
-        perp_hue = descretized_perplexity(test_hsv[:,1], Yps[1])
-        perp_sat = descretized_perplexity(test_hsv[:,2], Yps[2])
-        perp_val = descretized_perplexity(test_hsv[:,3], Yps[3])
-        perp = geomean([perp_hue, perp_sat, perp_val])
-
-        mse_to_peak = mse_from_peak(test_hsv, tuple(Yps...))
-    end
-end
-
-=#
 
 ######################################################################
 

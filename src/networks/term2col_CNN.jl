@@ -55,10 +55,10 @@ CNN_combine_terms(hidden_layer_size, n_steps) = function (terms_emb, keep_prob)
         h_pool_flat = reshape(h_pool, [-1, num_filters_total])
         ############
 
-        Wo = get_variable((num_filters_total, hidden_layer_size), Float32)
-        bo = get_variable(hidden_layer_size, Float32)
+        Wco = get_variable((num_filters_total, hidden_layer_size), Float32)
+        bco = get_variable(hidden_layer_size, Float32)
 
-        Zo = nn.relu(h_pool_flat*Wo + bo)
+        Zco = nn.relu(h_pool_flat*Wco + bco)
     end
 
 end
@@ -75,4 +75,30 @@ function TermToColorDistributionCNN(enc, word_vecs=rand(300,nlabel(enc))::Abstra
         )
    
     TermToColorDistributionCNN(enc, sess, optimizer, summary_op)
+end
+
+##########################
+
+
+immutable TermToColorPointCNN{OPT, ENC, SMR} <: AbstractPointEstML
+    encoding::ENC
+    sess::Session
+    optimizer::OPT
+    summary::SMR
+end
+
+
+
+function TermToColorPointCNN(enc, word_vecs::AbstractMatrix=rand(300,nlabel(enc));
+                                     output_res=256,
+                                     hidden_layer_size=size(word_vecs,1),
+                                     n_steps=4,
+                                     learning_rate=0.001
+)
+    sess, optimizer, summary_op = init_point_est_network(
+        CNN_combine_terms(hidden_layer_size, n_steps),
+        word_vecs, n_steps, hidden_layer_size, learning_rate
+        )
+   
+    TermToColorPointCNN(enc, sess, optimizer, summary_op)
 end
