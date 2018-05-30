@@ -36,6 +36,15 @@ export output_res
 
 include("init_datadeps.jl")
 
+
+abstract type AbstractDistEstModel end
+abstract type AbstractPointEstModel end
+
+abstract type AbstractDistEstML  <: AbstractDistEstModel end
+abstract type AbstractPointEstML <: AbstractPointEstModel end
+const AbstractModelML = Union{AbstractDistEstML, AbstractPointEstML}
+
+
 include("util.jl")
 include("tf_extra.jl")
 

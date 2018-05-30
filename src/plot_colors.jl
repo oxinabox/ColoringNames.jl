@@ -36,7 +36,7 @@ function plot_colors(column_colors...; column_names=[], row_names=[])
             push!(colors, color)
         end
     end
-    scatter!(xs, ys; color=colors, shape=:square,#, markersize=100,
+    scatter!(xs, ys; color=colors, shape=:square, markersize=00,
         xdiscrete_values=[""; ""; column_names],
         legend=nothing
     )
@@ -63,7 +63,31 @@ function plot_hsv_hist(hp::Vector, sp::Vector, vp::Vector; kwargs...)
         ylabel=["Probability" "" ""]; kwargs...)
 end
 
+function plot_hsv_point(hsvs::Matrix, names; kwargs...)
+    colors = mapslices(hsv2colorant, hsvs, 1) |> vec
+    @assert length(colors) == length(names)
+    xs = 1:length(colors)
+    ys = ones(length(colors))
+    scatter(xs, ys;
+        xlim = (0, length(colors)+1),
+        ylim = (0.5, 1.5),
+        color = colors,
+        markersize=30,
+        legend=nothing,
+        size=(80*(length(colors)+2),200),
+        kwargs...
+    )
+    scatter!(xs, ifelse.(xs.%2.==1, ys.-0.3, ys.+0.3);
+        series_annotations=names,
+        markeralpha=0,
+    )
+end
 
-function plot_query(mdl, input_data;  kwargs...)
+
+function plot_query(mdl::AbstractPointEstModel, names::Vector;  kwargs...)
+    plot_hsv_point(query(mdl, names), names; kwargs...)              
+end
+
+function plot_query(mdl::AbstractDistEstModel, input_data;  kwargs...)
     plot_hsv_hist(query(mdl, input_data)...; title=input_data)              
 end
