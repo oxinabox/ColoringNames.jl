@@ -16,7 +16,7 @@ end
 
 function morpheme_tokenizer(rule_csv_file::AbstractString)
     rules = open(rule_csv_file) do fh
-        ObsView(readcsv(fh), ObsDim.First())
+        ObsView(readcsv(fh, comments=true), ObsDim.First())
     end
     morpheme_tokenizer(rules)
 end;

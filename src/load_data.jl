@@ -42,6 +42,10 @@ function load_munroe_data(path=datadep"Munroe Color Corpus"; dev_as_train=false,
     ColorDatasets(encoding, train, dev, test)
 end
 
+##########################################################################################
+# Extrapolation Dataset
+
+
 """
 Finds rare color descriptions.
 
@@ -82,7 +86,7 @@ Defined a new dataset for purposes of evaluating a methods ability to extrapolat
 Given a Dataset and a list of `texts`, removes all instances of those texts from the train set,
 and restricts the dev and test sets to *only* contain those `texts`
 """
-function extrapolation_dataset(base_dataset, restricted_texts)
+function extrapolation_dataset(base_dataset, restricted_texts=rare_descriptions(base_dataset.train.texts))
     restricted = Set(restricted_texts)
     train_inds = find(base_dataset.train.texts) do x
         x ∉  restricted
@@ -106,7 +110,62 @@ function extrapolation_dataset(base_dataset, restricted_texts)
 
 end
 
-###########
+########################################################################################################################
+# Order Relevances
+
+function order_relevant_name_pairs(cldataset::ColorDataset)
+    inds = findfirst.([cldataset.texts], unique(cldataset.texts)); #Index for elements with unique texts
+    terms = mapslices(x->[x], cldataset.terms_padded[:,  inds], 1) |> vec; # the terms-vect encodings for those elements
+
+    sort_on = Tuple.(sort.(terms)) # convert terms vector to sorted tuples
+    # so when we sort it later, [2,0,1] will be next to [1,2,0]
+
+    sorted = sort(collect(zip(sort_on, inds)), by=first) # sort it based on sorted_on, pairing it with the the inds 
+    grouped = groupby(first, sorted) # group it based on sorted_on
+
+
+    order_relevant_ind_grps = [last.(grp) for grp in grouped 
+                        if length(grp) > 1 && grp[1][1][3]!=0] 
+                        #if grp[1][1][3]==0 then it is of from (0,0,0,x) which mean single word, so prob a typo
+
+    # check to make sure everything is actually unique
+    for inds in order_relevant_ind_grps
+        ii1, ii2 = inds
+        @assert cldataset.terms_padded[:,ii1] !== cldataset.terms_padded[:,ii2]
+    end
+
+    getindex.([cldataset.texts], order_relevant_ind_grps)
+end
+
+            
+"""
+    order_relevant_dataset(base_dataset)
+            
+            Generates a new dataset with the same test dataset, but with a 
+"""
+function order_relevant_dataset(base_dataset)
+    keep_texts = reduce(union!,Set{String}, order_relevant_name_pairs(base_dataset.dev))
+
+    dev_inds = find(base_dataset.dev.texts) do x
+        x ∈  keep_texts
+    end
+
+    test_inds = find(base_dataset.test.texts) do x
+        x ∈  keep_texts
+    end
+    od = (ObsDim.Last(), ObsDim.Last(), ObsDim.First())
+
+    ColorDatasets(base_dataset.encoding,
+        base_dataset.train,
+        ColorDataset(datasubset((base_dataset.dev.texts, base_dataset.dev.terms_padded, base_dataset.dev.colors), dev_inds, od)...),
+        ColorDataset(datasubset((base_dataset.test.texts, base_dataset.test.terms_padded, base_dataset.test.colors), test_inds, od)...)
+    )
+end
+
+
+
+
+#################################################
 
 
 

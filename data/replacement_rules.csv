@@ -31,8 +31,10 @@ rosy,rose y
 rusty,rust y
 sandy,sand y,
 -, - 
-blurple, blue - purple
+# the parts after this are spelling corrections so things have embeddings
 kahki, khaki
 magneta, magenta
 robin's, robin 's
 muave, mauve
+# use bluish-purple (not no spaces) as that has an embedding, note this is different from "blue ish - purple" because it is not tokenized sperately
+blurple, bluish-purple

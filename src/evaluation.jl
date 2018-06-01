@@ -55,13 +55,15 @@ end
 function full3d_descretized_perplexity(obs, predicted_class_probs)
     Y_obs_hue, Y_obs_sat, Y_obs_val = obs
     Yp_hue, Yp_sat, Yp_val = predicted_class_probs
+    num_obs = length(Y_obs_hue)
+    @assert num_obs == length(Y_obs_sat) == length(Y_obs_val)
     
     total_lp = 0.0
     total_lp += total_descretized_logprob(Y_obs_hue, Yp_hue)
     total_lp += total_descretized_logprob(Y_obs_sat, Yp_sat)
     total_lp += total_descretized_logprob(Y_obs_val, Yp_val)
     
-    exp2(-total_lp/length(obs))
+    exp2(-total_lp/num_obs)
 end
 
 ###########################################

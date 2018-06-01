@@ -22,7 +22,7 @@ using KernelDensity
 export plot_colors, plot_hsv, plot_query
 export morpheme_tokenize, rpad_to_matrix, @names_from, prepare_data, prepare_labels, hsv2colorant
 export descretized_perplexity, find_bin, mse_from_peak, mse_from_distmean, distmean, peak, bin_expected_value, total_descretized_logprob
-export load_munroe_data, rare_descriptions, ColorDatasets, ColorDataset, extrapolation_dataset
+export load_munroe_data, rare_descriptions, ColorDatasets, ColorDataset, extrapolation_dataset, order_relevant_dataset, order_relevant_name_pairs
 export stringify_keys, laplace_smooth
 
 export TermToColorDistributionSOWE, TermToColorDistributionRNN, TermToColorDistributionCNN, TermToColorDistributionEmpirical
