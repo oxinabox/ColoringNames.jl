@@ -11,11 +11,19 @@ mutable struct TermToColorDistributionEmpirical <: AbstractDistEstModel
     end
 end
 
+"Dummy constructor for compatibility"
+function TermToColorDistributionEmpirical(args...; output_res=256, kwargs...)
+    TermToColorDistributionEmpirical(output_res)
+end
+
+
+
+
 output_res(mdl::TermToColorDistributionEmpirical) = mdl.output_res
 
 float_type(mdl::TermToColorDistributionEmpirical) = Float64
 function train!(mdl::TermToColorDistributionEmpirical, train_text, train_terms_padded, train_hsvps::NTuple{3};
-    remove_zeros_hack = true
+    remove_zeros_hack = true, kwargs...
     )
     mdl.encoding = labelenc(train_text)
     mdl.hsvp = train_hsvps
@@ -32,7 +40,7 @@ function train!(mdl::TermToColorDistributionEmpirical, train_text, train_terms_p
 end
 
 
-function query(mdl::TermToColorDistributionEmpirical,  input_texts::Vector, args...)
+function query(mdl::TermToColorDistributionEmpirical,  input_texts::AbstractVector, args...)
     ind = convertlabel(LabelEnc.Indices, String.(input_texts), mdl.encoding)
     mdl.hsvp[1][:,ind], mdl.hsvp[2][:, ind], mdl.hsvp[3][:, ind]
 end
@@ -47,8 +55,10 @@ mutable struct TermToColorPointEmpirical <: AbstractPointEstModel
     TermToColorPointEmpirical() = new()
 end
 
+TermToColorPointEmpirical(args...; kwargs...) = TermToColorPointEmpirical() # dummy constructor for compat
 
-function train!(mdl::TermToColorPointEmpirical, train_text, train_terms_padded, train_hsvs::Matrix)
+
+function train!(mdl::TermToColorPointEmpirical, train_text, train_terms_padded, train_hsvs::Matrix; kwargs...)
     grps = collect(groupby(last, enumerate(train_text)))
     len = length(grps)
     
@@ -88,7 +98,7 @@ function hsv_mean(colors)
 end
 
 
-function query(mdl::TermToColorPointEmpirical,  input_text::Vector)
+function query(mdl::TermToColorPointEmpirical,  input_text::AbstractVector)
     ind = convertlabel(LabelEnc.Indices, String.(input_text), mdl.encoding)
     mdl.hsv[:, ind]
 end

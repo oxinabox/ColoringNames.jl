@@ -5,11 +5,11 @@ immutable ColorDataset{T,TP,TC}
 end
 
 
-immutable ColorDatasets{E, CD<:ColorDataset}
+immutable ColorDatasets{E, CD1<:ColorDataset, CD2<:ColorDataset, CD3<:ColorDataset}
     encoding::E
-    train::CD
-    dev::CD
-    test::CD
+    train::CD1
+    dev::CD2
+    test::CD3
 end
 
 
@@ -93,7 +93,7 @@ function extrapolation_dataset(base_dataset, restricted_texts=rare_descriptions(
     end
 
     dev_inds = find(base_dataset.dev.texts) do x
-        x ∈  restricted
+        x ∉  restricted
     end
 
     test_inds = find(base_dataset.test.texts) do x
@@ -144,7 +144,7 @@ end
             Generates a new dataset with the same test dataset, but with a 
 """
 function order_relevant_dataset(base_dataset)
-    keep_texts = reduce(union!,Set{String}, order_relevant_name_pairs(base_dataset.dev))
+    keep_texts = reduce(vcat,Vector{String}, order_relevant_name_pairs(base_dataset.dev))
 
     dev_inds = find(base_dataset.dev.texts) do x
         x ∈  keep_texts

@@ -26,7 +26,6 @@ export load_munroe_data, rare_descriptions, ColorDatasets, ColorDataset, extrapo
 export stringify_keys, laplace_smooth
 
 export TermToColorDistributionSOWE, TermToColorDistributionRNN, TermToColorDistributionCNN, TermToColorDistributionEmpirical
-
 export TermToColorPointSOWE, TermToColorPointRNN, TermToColorPointCNN, TermToColorPointEmpirical
 
 export find_distributions, load_word2vec_embeddings, load_text_embeddings, load_color_nameset

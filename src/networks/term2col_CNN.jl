@@ -40,7 +40,7 @@ CNN_combine_terms(hidden_layer_size, n_steps) = function (terms_emb, keep_prob)
                 padding="VALID",
                 name="conv_$i")
             # Apply nonlinearity
-            h = nn.relu(conv + b, name="h_$i")
+            h = nn.dropout(nn.relu(conv + b, name="h_$i"), keep_prob)
             # Max-pooling over the outputs
             nn.max_pool(
                 h,
@@ -58,7 +58,7 @@ CNN_combine_terms(hidden_layer_size, n_steps) = function (terms_emb, keep_prob)
         Wco = get_variable((num_filters_total, hidden_layer_size), Float32)
         bco = get_variable(hidden_layer_size, Float32)
 
-        Zco = nn.relu(h_pool_flat*Wco + bco)
+        Zco = nn.dropout(nn.relu(h_pool_flat*Wco + bco), keep_prob)
     end
 
 end

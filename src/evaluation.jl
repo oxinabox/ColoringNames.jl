@@ -154,3 +154,7 @@ function hsv_squared_error(aa, bb)
     
     hsquared_error(ha, hb) + squared_error(sa, sb) + squared_error(va, vb)
 end
+
+
+##################
+
