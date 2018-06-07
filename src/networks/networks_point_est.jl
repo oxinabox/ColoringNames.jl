@@ -24,7 +24,7 @@ function default_train_kwargs(mdl::AbstractPointEstML, cldata, args...)
     Dict(:early_stopping => () ->evaluate(mdl, cldata.dev))
 end
             
-function train!(mdl::AbstractPointEstML, train_text, train_terms_padded, train_hsvs::Matrix; kwargs...)
+function train!(mdl::AbstractPointEstML, train_text, train_terms_padded, train_hsvs::AbstractMatrix; kwargs...)
     ss=mdl.sess.graph
     function obs_input_func(batch)
         hsv_obs, terms = batch       

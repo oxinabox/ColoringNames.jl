@@ -1,0 +1,8 @@
+"method","mse"
+"Empirical Non-extrapolating",0.06369885057210922
+"SOWE Extrapolating",0.09277016669511795
+"SOWE Non-extrapolating",0.06707734614610672
+"CNN Extrapolating",0.0708744153380394
+"CNN Non-extrapolating",0.0646815225481987
+"RNN Extrapolating",0.13932013511657715
+"RNN Non-extrapolating",0.1356819123029709

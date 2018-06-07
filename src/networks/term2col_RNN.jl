@@ -28,23 +28,22 @@ RNN_combine_terms(hidden_layer_size) = function (terms_emb, keep_prob)
         # so the network knows where it ends
         # This marginally improves results
         term_lengths = indmin(terms_emb, 1)[:, 1]
-
-        cell = nn.rnn_cell.DropoutWrapper(nn.rnn_cell.BasicRNNCell(hidden_layer_size), keep_prob)
         
-        Hs, state = nn.rnn(cell, terms_emb, term_lengths; dtype=Float32, time_major=true)
+#        map(unstack(term_embs)) do 
+#        stack(
+        
+        X= term_embs
+        cell = nn.rnn_cell.DropoutWrapper(nn.rnn_cell.GRUCell(hidden_layer_size), keep_prob)
+        
+        Hs, state = nn.rnn(cell, X, term_lengths; dtype=Float32, time_major=true)
         Ho = Hs[end]      
         H = reshape(Ho, [-1, hidden_layer_size]) #Force shape
         
-        
-        W1 = get_variable((hidden_layer_size, 3hidden_layer_size), Float32)
-        B1 = get_variable((3hidden_layer_size), Float32)
+        W1 = get_variable((hidden_layer_size, hidden_layer_size), Float32)
+        B1 = get_variable((hidden_layer_size), Float32)
         Z1 = nn.dropout(nn.relu(H*W1 + B1), keep_prob)
         
-        W2 = get_variable((3hidden_layer_size, hidden_layer_size), Float32)
-        B2 = get_variable((hidden_layer_size), Float32)
-        Z2 = nn.dropout(nn.relu(Z1*W2 + B2), keep_prob)
-        
-        Z2
+        Z1
     end
 end
 

@@ -24,28 +24,23 @@ end;
 const rules_path = joinpath(dirname(@__FILE__), "..", "data", "replacement_rules.csv") #Proper way, but does not work with juno
 const morpheme_tokenize = morpheme_tokenizer(rules_path)
 
-@memoize demarcate(tokens, starter="<S>", ender="</S>") = [starter; tokens; ender]
-
 
 
 """
 Encodes and packs data
 Returns the packed data and the encoder.
 """
-function prepare_data(raw, encoding_=nothing; do_demacate=true, tokenizer=morpheme_tokenize)
+function prepare_data(raw, encoding_=nothing; tokenizer=morpheme_tokenize)
     labels = convert(Vector{String}, raw[:,1]);
-    labels_padded, encoding = prepare_labels(labels, encoding_; do_demacate=do_demacate, tokenizer=tokenizer)
+    labels_padded, encoding = prepare_labels(labels, encoding_; tokenizer=tokenizer)
 
     hsv_data = convert(Matrix{Float32}, raw[:,2:end]);
     hsv_data, labels_padded, encoding
 end
 
-function prepare_labels(labels, encoding_=nothing; do_demacate=true, tokenizer=morpheme_tokenize)
+function prepare_labels(labels, encoding_=nothing; tokenizer=morpheme_tokenize)
 
     tokenized_labels = tokenizer.(labels)
-    if do_demacate
-        tokenized_labels = demarcate.(tokenized_labels)
-    end
 
     local encoding
     if encoding_===nothing
@@ -57,7 +52,7 @@ function prepare_labels(labels, encoding_=nothing; do_demacate=true, tokenizer=m
 
     label_inds = map(toks->label2ind.(toks, Scalar(encoding)), tokenized_labels)
 
-    rpad_to_matrix(label_inds), encoding
+    rpad_to_matrix(label_inds; extra_rows=1), encoding
 end
 
 

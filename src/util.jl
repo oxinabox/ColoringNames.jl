@@ -9,9 +9,10 @@ function Base.rpad{T}(xs::Vector{T}, n::Integer, p::T=zero(T))
 end
 
 "Creates a matrix where each column is one of the vectors from `xss`"
-function rpad_to_matrix{T}(xss::Vector{Vector{T}}, n_rows::T=maximum(length.(xss)), p::T=zero(T))
+function rpad_to_matrix{T}(xss::Vector{Vector{T}}, p::T=zero(T);  extra_rows=0)
+    n_rows=maximum(length.(xss)) + extra_rows
     n_cols = length(xss)
-    ret = fill(p, (n_rows, n_cols))
+    ret = fill(p, (n_rows+extra_rows, n_cols))
     for (cc, xs) in enumerate(xss)
         for (rr, x) in enumerate(xs)
             @inbounds ret[rr, cc] = x
