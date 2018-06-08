@@ -125,8 +125,8 @@ function order_relevant_name_pairs(cldataset::ColorDataset)
 
 
     order_relevant_ind_grps = [last.(grp) for grp in grouped 
-                        if length(grp) > 1 && grp[1][1][3]!=0] 
-                        #if grp[1][1][3]==0 then it is of from (0,0,0,x) which mean single word, so prob a typo
+                        if length(grp) > 1 && sum(grp[1][1] .!==0) != 1] 
+                        #if sum(grp[1][1] .!==0) == 1 then it is asingle word, so prob a typo
 
     # check to make sure everything is actually unique
     for inds in order_relevant_ind_grps

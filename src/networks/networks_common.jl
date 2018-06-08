@@ -52,7 +52,7 @@ function query(mdl::AbstractModelML, input_texts::AbstractVector)
     encoding=mdl.encoding
     max_tokens=n_steps(mdl)
                 
-    labels, _ = prepare_labels(input_texts, encoding, do_demacate=false)
+    labels, _ = prepare_labels(input_texts, encoding)
 
     nsteps_to_pad = max(max_tokens - size(labels,1), 0)
     padded_labels = [labels; zeros(Int, (nsteps_to_pad, length(input_texts)))]

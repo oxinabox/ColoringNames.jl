@@ -29,13 +29,11 @@ RNN_combine_terms(hidden_layer_size) = function (terms_emb, keep_prob)
         # This marginally improves results
         term_lengths = indmin(terms_emb, 1)[:, 1]
         
-#        map(unstack(term_embs)) do 
-#        stack(
-        
-        X= term_embs
+        X= terms_emb
         cell = nn.rnn_cell.DropoutWrapper(nn.rnn_cell.GRUCell(hidden_layer_size), keep_prob)
         
         Hs, state = nn.rnn(cell, X, term_lengths; dtype=Float32, time_major=true)
+        
         Ho = Hs[end]      
         H = reshape(Ho, [-1, hidden_layer_size]) #Force shape
         
