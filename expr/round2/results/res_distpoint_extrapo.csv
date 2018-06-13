@@ -1,0 +1,9 @@
+"method","nonextrapolating_mse","extrapolating_mse"
+"Distribution Mean Direct",0.06369885215631756,NaN
+"Distribution Mean Direct-smoothed",0.06369720628680688,NaN
+"Distribution Mean SOWE",0.07535109169090923,0.07938859208193062
+"Distribution Mean SOWE-smoothed",0.0751902403875683,0.07868103127650498
+"Distribution Mean CNN",0.07552672976660602,0.08129844552270606
+"Distribution Mean CNN-smoothed",0.07599931411753617,0.0820636528076258
+"Distribution Mean RNN",0.10753591521621658,0.1475311594544664
+"Distribution Mean RNN-smoothed",0.10147752859595796,0.1487085024230368
