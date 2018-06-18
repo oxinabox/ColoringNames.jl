@@ -1,8 +1,0 @@
-"method","mse"
-"Direct Non-extrapolating",0.06369885057210922
-"SOWE Extrapolating",0.08002562820911407
-"SOWE Non-extrapolating",0.07566486299037933
-"CNN Extrapolating",0.07422033697366714
-"CNN Non-extrapolating",0.06424777954816818
-"RNN Extrapolating",0.14458224177360535
-"RNN Non-extrapolating",0.13539788126945496

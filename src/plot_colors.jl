@@ -57,7 +57,10 @@ function plot_hsv_hist(hp::Vector, sp::Vector, vp::Vector; kwargs...)
     bar([hp, sp, vp],
         legend = false,
         layout=(1,3),
-        linewidth=0,
+        linewidth=1,
+        #width=1,
+        linecolor = [h_bar_colors s_bar_colors v_bar_colors],
+        size=(600,200),
         seriescolor=[h_bar_colors s_bar_colors v_bar_colors],
         xlabel=["Hue" "Saturation" "Value"],
         ylabel=["Probability" "" ""]; kwargs...)
@@ -84,10 +87,10 @@ function plot_hsv_point(hsvs::Matrix, names; kwargs...)
 end
 
 
-function plot_query(mdl::AbstractPointEstModel, names::Vector;  kwargs...)
-    plot_hsv_point(query(mdl, names), names; kwargs...)              
+function plot_query(mdl::AbstractPointEstModel, input_text::Vector;  kwargs...)
+    plot_hsv_point(query(mdl, input_text), names; title=input_text, kwargs...)              
 end
 
-function plot_query(mdl::AbstractDistEstModel, input_data;  kwargs...)
-    plot_hsv_hist(query(mdl, input_data)...; title=input_data)              
+function plot_query(mdl::AbstractDistEstModel, input_text;  kwargs...)
+    plot_hsv_hist(query(mdl, input_text)...; title=["" input_text ""], kwargs...)              
 end

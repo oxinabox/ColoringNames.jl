@@ -1,9 +1,0 @@
-"method","mse"
-"Distribution Mean Direct",0.0663556646126004
-"Distribution Mean Direct-smoothed",0.0663693462975219
-"Distribution Mean SOWE",0.06839256848242657
-"Distribution Mean SOWE-smoothed",0.06823720098900045
-"Distribution Mean CNN",0.06951578640011823
-"Distribution Mean CNN-smoothed",0.06999059991164286
-"Distribution Mean RNN",0.07805194627821269
-"Distribution Mean RNN-smoothed",0.07498525603965446
