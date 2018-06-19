@@ -15,7 +15,7 @@ end
 
 
 "Run all evalutations, returning a dictionary of results"
-function evaluate(mdl::AbstractDistEstModel, test_texts, test_terms_padded, test_hsv)
+function evaluate(mdl::AbstractDistEstModel, test_texts, test_terms_padded, test_hsv; extensive=false)
                 
     Y_obs_hue = @view(test_hsv[:, 1])
     Y_obs_sat = @view(test_hsv[:, 2])
@@ -25,16 +25,20 @@ function evaluate(mdl::AbstractDistEstModel, test_texts, test_terms_padded, test
     Yp_hue, Yp_sat, Yp_val = map(transpose, query(mdl, test_texts))
 
                        
-    Dict{Symbol, Any}(
+    res = Dict{Symbol, Any}(
+        :perp => full3d_descretized_perplexity((Y_obs_hue, Y_obs_sat, Y_obs_val),(Yp_hue, Yp_sat, Yp_val)),
+
+        
+        :mse_to_distmean => mse_from_distmean(Y_obs, (Yp_hue, Yp_sat, Yp_val)),
+    )
+    
+    extensive && merge!(res, Dict{Symbol, Any}(
         :perp_hue => descretized_perplexity(Y_obs_hue, Yp_hue),
         :perp_sat => descretized_perplexity(Y_obs_sat, Yp_sat),
         :perp_val => descretized_perplexity(Y_obs_val, Yp_val),
-      
-        :perp => full3d_descretized_perplexity((Y_obs_hue, Y_obs_sat, Y_obs_val),(Yp_hue, Yp_sat, Yp_val)),
-
         :mse_to_distmode => mse_from_peak(Y_obs, (Yp_hue, Yp_sat, Yp_val)),
-        :mse_to_distmean => mse_from_distmean(Y_obs, (Yp_hue, Yp_sat, Yp_val)),
-    )
+    ))
+    res
 end
 
 
