@@ -66,7 +66,7 @@ function plot_hsv_hist(hp::Vector, sp::Vector, vp::Vector; kwargs...)
         ylabel=["Probability" "" ""]; kwargs...)
 end
 
-function plot_hsv_point(hsvs::Matrix, names; kwargs...)
+function plot_hsv_point_horisontal(hsvs::Matrix, names; kwargs...)
     colors = mapslices(hsv2colorant, hsvs, 1) |> vec
     @assert length(colors) == length(names)
     xs = 1:length(colors)
@@ -77,18 +77,45 @@ function plot_hsv_point(hsvs::Matrix, names; kwargs...)
         color = colors,
         markersize=30,
         legend=nothing,
+        grid=false,
+        axis=false,
         size=(80*(length(colors)+2),200),
         kwargs...
     )
-    scatter!(xs, ifelse.(xs.%2.==1, ys.-0.3, ys.+0.3);
+    scatter!(xs, ifelse.(xs.%2.==1, ys.-0.2, ys.+0.2);
         series_annotations=names,
         markeralpha=0,
+        markersize=0,
+    )
+end
+
+function plot_hsv_point(hsvs::Matrix, names; kwargs...)
+    colors = mapslices(hsv2colorant, hsvs, 1) |> vec
+    @assert length(colors) == length(names)
+    ys = 1:length(colors)
+    xs = 0.3ones(length(colors))
+    scatter(xs, ys;
+        ylim = (0, length(colors)+1),
+        xlim = (0, 2),
+        color = colors,
+        markersize=30,
+        legend=nothing,
+        grid=false,
+        axis=false,
+        size=(250, 80*(length(colors)+2)),
+        kwargs...
+    )
+    scatter!(xs.+1, ys;
+        series_annotations=names,
+        markeralpha=0,
+        markersize=0,
     )
 end
 
 
+
 function plot_query(mdl::AbstractPointEstModel, input_text::Vector;  kwargs...)
-    plot_hsv_point(query(mdl, input_text), names; title=input_text, kwargs...)              
+    plot_hsv_point(query(mdl, input_text), input_text; kwargs...)              
 end
 
 function plot_query(mdl::AbstractDistEstModel, input_text;  kwargs...)
