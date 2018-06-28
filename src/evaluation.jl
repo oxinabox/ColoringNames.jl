@@ -86,7 +86,7 @@ peak(predicted_class_probs::AbstractMatrix) = mapslices(peak, predicted_class_pr
 
 
 
-function mse_from_peak{T<:AbstractMatrix}(obs::AbstractMatrix, predicted_class_probs::NTuple{3, T})
+function mse_from_peak(obs::AbstractMatrix, predicted_class_probs::NTuple{3, T}) where T<:AbstractMatrix
     preds = reduce(hcat, peak.(predicted_class_probs))
     @assert size(preds, 1) == size(obs,1) "$(size(preds,1)) != $(size(obs,1))"
     mse(obs, preds)
@@ -123,7 +123,7 @@ function distmean(hp::AbstractMatrix, sp::AbstractMatrix, vp::AbstractMatrix)
         mapslices(weighted_bin_mean, vp, 2)
     )
 end
-function mse_from_distmean{T<:AbstractMatrix}(obs::AbstractMatrix, predicted_class_probs::NTuple{3, T})
+function mse_from_distmean(obs::AbstractMatrix, predicted_class_probs::NTuple{3, T}) where T<:AbstractMatrix
     preds = distmean(predicted_class_probs...)
     @assert size(preds, 1) == size(obs,1) "$(size(preds,1)) != $(size(obs,1))"
     mse(obs, preds)
