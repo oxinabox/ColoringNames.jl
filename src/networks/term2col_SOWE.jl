@@ -8,7 +8,7 @@ const Summaries = TensorFlow.summary
 
 export TermToColorDistributionSOWE
 
-immutable TermToColorDistributionSOWE{OPT, ENC, SMR} <: AbstractDistEstML
+struct TermToColorDistributionSOWE{OPT, ENC, SMR} <: AbstractDistEstML
     encoding::ENC
     sess::Session
     optimizer::OPT
@@ -51,7 +51,7 @@ function TermToColorDistributionSOWE(enc, word_vecs=rand(300,nlabel(enc))::Abstr
 end
 
 #########################
-immutable TermToColorPointSOWE{OPT, ENC, SMR} <: AbstractPointEstML
+struct TermToColorPointSOWE{OPT, ENC, SMR} <: AbstractPointEstML
     encoding::ENC
     sess::Session
     optimizer::OPT

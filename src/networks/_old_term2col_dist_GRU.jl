@@ -8,7 +8,7 @@ const Summaries = TensorFlow.summary
 
 export TermToColorDistributionNetwork, train!, query, evaluate, restore
 
-immutable TermToColorDistributionNetwork{NTerms, S<:AbstractString, OPT}
+struct TermToColorDistributionNetwork{NTerms, S<:AbstractString, OPT}
     encoding::LabelEnc.NativeLabels{S, NTerms}
     sess::Session
     optimizer::OPT
@@ -19,12 +19,12 @@ immutable TermToColorDistributionNetwork{NTerms, S<:AbstractString, OPT}
 end
 
 
-function TermToColorDistributionNetwork{S<:AbstractString, NTerms}(encoding::LabelEnc.NativeLabels{S, NTerms};
-                                                max_tokens=4,
-                                                output_res=64,
-                                                hidden_layer_size=128, #* at from search parameter space on dev set at output_res 64
-                                                embedding_dim=16 #* ditto
-                                               )
+function TermToColorDistributionNetwork(encoding::LabelEnc.NativeLabels{S, NTerms};
+                     max_tokens=4,
+                     output_res=64,
+                     hidden_layer_size=128, #* at from search parameter space on dev set at output_res 64
+                     embedding_dim=16 #* ditto
+                    ) where {S<:AbstractString, NTerms}
 
     sess, optimizer = init_terms_to_color_dist_network_session(NTerms, max_tokens, hidden_layer_size, embedding_dim, output_res)
     TermToColorDistributionNetwork(encoding, sess, optimizer,  max_tokens, output_res, hidden_layer_size, embedding_dim)

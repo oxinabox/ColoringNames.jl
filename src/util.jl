@@ -1,6 +1,6 @@
 
 
-function Base.rpad{T}(xs::Vector{T}, n::Integer, p::T=zero(T))
+function Base.rpad(xs::Vector{T}, n::Integer, p::T=zero(T)) where T
     sizehint!(xs, n)
     while length(xs)<n
         push!(xs, p)
@@ -9,7 +9,7 @@ function Base.rpad{T}(xs::Vector{T}, n::Integer, p::T=zero(T))
 end
 
 "Creates a matrix where each column is one of the vectors from `xss`"
-function rpad_to_matrix{T}(xss::Vector{Vector{T}}, p::T=zero(T);  extra_rows=0)
+function rpad_to_matrix(xss::Vector{Vector{T}}, p::T=zero(T);  extra_rows=0) where T
     n_rows=maximum(length.(xss)) + extra_rows
     n_cols = length(xss)
     ret = fill(p, (n_rows+extra_rows, n_cols))
@@ -22,7 +22,7 @@ function rpad_to_matrix{T}(xss::Vector{Vector{T}}, p::T=zero(T);  extra_rows=0)
 end
 
 "stips (trims) a value from a vector to make it shorter"
-function Base.rstrip{T}(v::Vector{T}, t::T=zero(T))
+function Base.rstrip(v::Vector{T}, t::T=zero(T)) where T
     last_strip = length(v)
     while last_strip>1
         v[last_strip]!=t && break
