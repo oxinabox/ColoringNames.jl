@@ -1,0 +1,5 @@
+"method","nonextrapolatingmse","extrapolatingmse"
+"Distribution Mean Operational Upper Bound-smoothed",0.06218009141061424,NaN
+"Distribution Mean SOWE-smoothed",0.07307470017572257,0.0764291790680164
+"Distribution Mean CNN-smoothed",0.07276961695966232,0.09374282677202656
+"Distribution Mean RNN-smoothed",0.10509903813829027,0.15104637981579436
