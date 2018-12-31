@@ -1,4 +1,6 @@
 "method","nonextrapolatingperp","extrapolatingperp"
+"Direct",2.950834193953115e9,NaN
+"Operational Upper Bound",843846.1755043188,NaN
 "SOWE-smoothed",839005.141480351,942045.6940659512
 "CNN-smoothed",892993.5811751804,1.0548725620390475e6
 "RNN-smoothed",1.8800725169582975e6,3.0749299428323586e6

@@ -1,4 +1,6 @@
 "method","mse"
+"Distribution Mean Direct",0.06635611645652997
+"Distribution Mean Operational Upper Bound",0.06636743143829865
 "Distribution Mean SOWE-smoothed",0.0680232175890777
 "Distribution Mean CNN-smoothed",0.06882467782095193
 "Distribution Mean RNN-smoothed",0.07728473596794
