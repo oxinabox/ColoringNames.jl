@@ -30,7 +30,7 @@ RNN_combine_terms(hidden_layer_size) = function (terms_emb, keep_prob)
         term_lengths = indmin(terms_emb, 1)[:, 1]
         
         X= terms_emb
-        cell = nn.rnn_cell.DropoutWrapper(nn.rnn_cell.GRUCell(hidden_layer_size), keep_prob)
+        cell = nn.rnn_cell.DropoutWrapper(nn.rnn_cell.LSTMCell(hidden_layer_size), keep_prob)
         
         Hs, state = nn.rnn(cell, X, term_lengths; dtype=Float32, time_major=true)
         
