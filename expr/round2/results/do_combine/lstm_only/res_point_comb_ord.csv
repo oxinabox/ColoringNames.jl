@@ -1,0 +1,4 @@
+"method","mse"
+"LSTM",0.09613459557294846
+"Distribution Mean RNN",0.08765904141627993
+"Distribution Mean RNN-smoothed",0.0886307536054804

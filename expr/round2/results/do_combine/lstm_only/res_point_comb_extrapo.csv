@@ -1,0 +1,4 @@
+"method","nonextrapolatingmse","extrapolatingmse"
+"LSTM",0.13809597492218018,0.14087577164173126
+"Distribution Mean RNN",0.10499460876378672,0.11197592739284144
+"Distribution Mean RNN-smoothed",0.10286643475534528,0.11155362198736746

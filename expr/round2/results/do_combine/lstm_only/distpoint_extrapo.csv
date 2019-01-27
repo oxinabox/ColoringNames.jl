@@ -1,0 +1,5 @@
+"method","mse"
+"Distribution Mean RNN Extrapolating",0.11197592739284144
+"Distribution Mean RNN Non-extrapolating",0.10499460876378672
+"Distribution Mean RNN-smoothed Extrapolating",0.11155362198736746
+"Distribution Mean RNN-smoothed Non-extrapolating",0.10286643475534528
