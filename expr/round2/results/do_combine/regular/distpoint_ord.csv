@@ -1,0 +1,6 @@
+"method","mse"
+"Distribution Mean Operational Upper Bound",0.06484226384736647
+"Distribution Mean SOWE",0.06560185760457346
+"Distribution Mean CNN",0.06582688105166774
+"Distribution Mean GRU",0.09536452027977917
+"Distribution Mean LSTM",0.08765904141627993

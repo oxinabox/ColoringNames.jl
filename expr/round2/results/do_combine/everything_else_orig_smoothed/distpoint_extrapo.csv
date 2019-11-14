@@ -1,0 +1,9 @@
+"method","mse"
+"Distribution Mean Direct Non-extrapolating",0.06213238168891163
+"Distribution Mean Operational Upper Bound Non-extrapolating",0.06218009141061424
+"Distribution Mean SOWE-smoothed Extrapolating",0.0764291790680164
+"Distribution Mean SOWE-smoothed Non-extrapolating",0.07307470017572257
+"Distribution Mean CNN-smoothed Extrapolating",0.09374282677202656
+"Distribution Mean CNN-smoothed Non-extrapolating",0.07276961695966232
+"Distribution Mean RNN-smoothed Extrapolating",0.15104637981579436
+"Distribution Mean RNN-smoothed Non-extrapolating",0.10509903813829027

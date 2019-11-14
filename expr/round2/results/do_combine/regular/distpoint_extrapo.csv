@@ -1,0 +1,10 @@
+"method","mse"
+"Distribution Mean Operational Upper Bound Non-extrapolating",0.06218009141061424
+"Distribution Mean SOWE Extrapolating",0.07639481398062851
+"Distribution Mean SOWE Non-extrapolating",0.07285586328364832
+"Distribution Mean CNN Extrapolating",0.08437807415514435
+"Distribution Mean CNN Non-extrapolating",0.07291856105657271
+"Distribution Mean GRU Extrapolating",0.15215027128488232
+"Distribution Mean GRU Non-extrapolating",0.10478952562356844
+"Distribution Mean LSTM Extrapolating",0.11197592739284144
+"Distribution Mean LSTM Non-extrapolating",0.10499460876378672
